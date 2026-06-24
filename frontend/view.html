@@ -19,54 +19,40 @@
     </header>
 
     <main class="bracket-wrapper" id="viewWrapper" style="display:none;">
-      <!-- Title & Sharing info -->
-      <div class="bracket-meta" style="flex-direction: column; align-items: stretch; gap: 1.25rem;">
-        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap: 1rem;">
+      <div class="bracket-meta" style="flex-direction:column;align-items:stretch;gap:1.25rem;">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;">
           <div>
-            <h1 id="bracketTitle" style="font-size:1.8rem; font-weight:800; margin-bottom:0.25rem;">Bracket</h1>
-            <p style="color:var(--text-secondary); font-size:0.9rem;">Created by <span id="creatorName" style="color:var(--text-primary); font-weight:600;">Loading...</span></p>
+            <h1 id="bracketTitle" style="font-size:1.8rem;font-weight:800;margin-bottom:0.25rem;">Bracket</h1>
+            <p style="color:var(--text-secondary);font-size:0.9rem;">Created by <span id="creatorName" style="color:var(--text-primary);font-weight:600;">Loading...</span></p>
           </div>
-          <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
             <div class="score-display-card">
               <span>Score:</span>
               <span class="score-number" id="bracketScore">0</span>
-              <span style="font-size:0.85rem; font-weight:500; color:var(--text-primary);" id="correctMatchesCount">(0/32 correct)</span>
+              <span style="font-size:0.85rem;font-weight:500;color:var(--text-primary);" id="correctMatchesCount">(0/32 correct)</span>
             </div>
             <button class="btn btn-secondary" id="downloadHtmlBtn">💾 Download HTML</button>
           </div>
         </div>
-
         <div class="share-copy-area">
-          <span style="font-size:0.85rem; font-weight:700; color:var(--accent-green);">SHARE LINK:</span>
-          <span class="share-link-text" id="shareLinkUrl">Loading share link...</span>
-          <button class="btn btn-primary" id="copyLinkBtn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Copy</button>
+          <span style="font-size:0.85rem;font-weight:700;color:var(--accent-green);">SHARE LINK:</span>
+          <span class="share-link-text" id="shareLinkUrl">Loading...</span>
+          <button class="btn btn-primary" id="copyLinkBtn" style="padding:0.5rem 1rem;font-size:0.85rem;">Copy</button>
         </div>
       </div>
 
-      <!-- Horizontal scrolling bracket area -->
       <div class="bracket-container" id="bracketContainer">
-        <!-- R32 Column -->
         <div class="bracket-round" id="round-r32"></div>
-
-        <!-- R16 Column -->
         <div class="bracket-round" id="round-r16"></div>
-
-        <!-- QF Column -->
         <div class="bracket-round" id="round-qf"></div>
-
-        <!-- SF Column -->
         <div class="bracket-round" id="round-sf"></div>
-
-        <!-- Final Column -->
         <div class="bracket-round" id="round-final"></div>
-
-        <!-- Champion Column -->
         <div class="bracket-round" id="round-champion">
           <div class="champion-wrapper">
             <div class="champion-title-text">Champion</div>
             <div class="champion-card empty" id="championCard">
               <div class="champion-badge">Winner</div>
-              <div class="empty-state-icon" style="font-size: 2rem; margin-bottom: 0px;">🏆</div>
+              <div class="empty-state-icon" style="font-size:2rem;margin-bottom:0px;">🏆</div>
               <span id="championName">TBD</span>
             </div>
           </div>
@@ -74,567 +60,289 @@
       </div>
     </main>
 
-    <!-- Error State -->
-    <div id="errorState" class="empty-state" style="display:none; margin: auto 0;">
+    <div id="errorState" class="empty-state" style="display:none;margin:auto 0;">
       <div class="empty-state-icon">⚠️</div>
       <h2>Bracket Not Found</h2>
-      <p style="margin: 0.5rem 0 1.5rem 0;">We couldn't retrieve the bracket with the specified ID.</p>
+      <p style="margin:0.5rem 0 1.5rem 0;">We couldn't retrieve the bracket with the specified ID.</p>
       <a href="bracket.html" class="btn btn-primary">Make a New Bracket</a>
     </div>
 
-    <!-- Loading State -->
-    <div id="loadingState" class="empty-state" style="margin: auto 0;">
-      <div style="font-size: 2.5rem; animation: spin 1.5s linear infinite;">⚽</div>
-      <h2 style="margin-top: 1rem;">Loading Bracket...</h2>
-      <style>
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      </style>
+    <div id="loadingState" class="empty-state" style="margin:auto 0;">
+      <div style="font-size:2.5rem;animation:spin 1.5s linear infinite;">⚽</div>
+      <h2 style="margin-top:1rem;">Loading Bracket...</h2>
+      <style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
     </div>
 
-    <!-- Hover/Tap Tooltip Container -->
     <div class="tooltip-container" id="teamTooltip"></div>
-
     <div class="toast" id="toastMessage">Link Copied!</div>
   </div>
 
-  <!-- JS Logic -->
   <script>
     const API_BASE = "https://fifabracket-api.jason-greathouse.workers.dev";
 
-    // Static team details mapping
+    function getFlagEmoji(teamId) {
+      if (!teamId) return '🏳️';
+      const code = teamId.toUpperCase();
+      if (code === 'SCO') return '🏴󠁧󠁢󠁳󠁣󠁴󠁿';
+      if (code === 'ENG') return '🏴󠁧󠁢󠁦󠁬󠁧󠁿';
+      const isoMap = {
+        CZE:'CZ', KOR:'KR', MEX:'MX', RSA:'ZA', BIH:'BA', CAN:'CA', QAT:'QA', SUI:'CH',
+        BRA:'BR', HAI:'HT', MAR:'MA', AUS:'AU', PAR:'PY', TUR:'TR', USA:'US', CIV:'CI',
+        CUW:'CW', ECU:'EC', GER:'DE', JPN:'JP', NED:'NL', SWE:'SE', TUN:'TN', BEL:'BE',
+        EGY:'EG', IRN:'IR', NZL:'NZ', CPV:'CV', ESP:'ES', KSA:'SA', URU:'UY', FRA:'FR',
+        IRQ:'IQ', NOR:'NO', SEN:'SN', ALG:'DZ', ARG:'AR', AUT:'AT', JOR:'JO', COD:'CD',
+        COL:'CO', POR:'PT', UZB:'UZ', CRO:'HR', GHA:'GH', PAN:'PA'
+      };
+      const iso = isoMap[code];
+      if (!iso) return '🏳️';
+      return iso.split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
+    }
+
     const TEAM_INFO = {
-      CZE: { rank: 35, odds: "+15000" },
-      KOR: { rank: 22, odds: "+8000" },
-      MEX: { rank: 15, odds: "+5000" },
-      RSA: { rank: 59, odds: "+20000" },
-      BIH: { rank: 74, odds: "+30000" },
-      CAN: { rank: 40, odds: "+8000" },
-      QAT: { rank: 34, odds: "+25000" },
-      SUI: { rank: 19, odds: "+5000" },
-      BRA: { rank: 5, odds: "+550" },
-      HAI: { rank: 86, odds: "+50000" },
-      MAR: { rank: 13, odds: "+2500" },
-      SCO: { rank: 39, odds: "+20000" },
-      AUS: { rank: 24, odds: "+10000" },
-      PAR: { rank: 56, odds: "+15000" },
-      TUR: { rank: 26, odds: "+8000" },
-      USA: { rank: 16, odds: "+3300" },
-      CIV: { rank: 30, odds: "+8000" },
-      CUW: { rank: 90, odds: "+75000" },
-      ECU: { rank: 29, odds: "+6600" },
-      GER: { rank: 8, odds: "+900" },
-      JPN: { rank: 18, odds: "+4000" },
-      NED: { rank: 7, odds: "+1400" },
-      SWE: { rank: 25, odds: "+8000" },
-      TUN: { rank: 41, odds: "+20000" },
-      BEL: { rank: 10, odds: "+1600" },
-      EGY: { rank: 36, odds: "+15000" },
-      IRN: { rank: 20, odds: "+8000" },
-      NZL: { rank: 104, odds: "+50000" },
-      CPV: { rank: 65, odds: "+30000" },
-      ESP: { rank: 3, odds: "+500" },
-      KSA: { rank: 53, odds: "+25000" },
-      URU: { rank: 11, odds: "+1200" },
-      FRA: { rank: 2, odds: "+450" },
-      IRQ: { rank: 58, odds: "+25000" },
-      NOR: { rank: 44, odds: "+10000" },
-      SEN: { rank: 21, odds: "+6600" },
-      ALG: { rank: 37, odds: "+12000" },
-      ARG: { rank: 1, odds: "+400" },
-      AUT: { rank: 23, odds: "+6600" },
-      JOR: { rank: 71, odds: "+40000" },
-      COD: { rank: 62, odds: "+25000" },
-      COL: { rank: 9, odds: "+1600" },
-      POR: { rank: 6, odds: "+750" },
-      UZB: { rank: 66, odds: "+40000" },
-      CRO: { rank: 12, odds: "+2500" },
-      ENG: { rank: 4, odds: "+600" },
-      GHA: { rank: 64, odds: "+15000" },
-      PAN: { rank: 85, odds: "+25000" }
+      CZE:{rank:35,odds:"+15000"}, KOR:{rank:22,odds:"+8000"}, MEX:{rank:15,odds:"+5000"},
+      RSA:{rank:59,odds:"+20000"}, BIH:{rank:74,odds:"+30000"}, CAN:{rank:40,odds:"+8000"},
+      QAT:{rank:34,odds:"+25000"}, SUI:{rank:19,odds:"+5000"}, BRA:{rank:5,odds:"+550"},
+      HAI:{rank:86,odds:"+50000"}, MAR:{rank:13,odds:"+2500"}, SCO:{rank:39,odds:"+20000"},
+      AUS:{rank:24,odds:"+10000"}, PAR:{rank:56,odds:"+15000"}, TUR:{rank:26,odds:"+8000"},
+      USA:{rank:16,odds:"+3300"}, CIV:{rank:30,odds:"+8000"}, CUW:{rank:90,odds:"+75000"},
+      ECU:{rank:29,odds:"+6600"}, GER:{rank:8,odds:"+900"}, JPN:{rank:18,odds:"+4000"},
+      NED:{rank:7,odds:"+1400"}, SWE:{rank:25,odds:"+8000"}, TUN:{rank:41,odds:"+20000"},
+      BEL:{rank:10,odds:"+1600"}, EGY:{rank:36,odds:"+15000"}, IRN:{rank:20,odds:"+8000"},
+      NZL:{rank:104,odds:"+50000"}, CPV:{rank:65,odds:"+30000"}, ESP:{rank:3,odds:"+500"},
+      KSA:{rank:53,odds:"+25000"}, URU:{rank:11,odds:"+1200"}, FRA:{rank:2,odds:"+450"},
+      IRQ:{rank:58,odds:"+25000"}, NOR:{rank:44,odds:"+10000"}, SEN:{rank:21,odds:"+6600"},
+      ALG:{rank:37,odds:"+12000"}, ARG:{rank:1,odds:"+400"}, AUT:{rank:23,odds:"+6600"},
+      JOR:{rank:71,odds:"+40000"}, COD:{rank:62,odds:"+25000"}, COL:{rank:9,odds:"+1600"},
+      POR:{rank:6,odds:"+750"}, UZB:{rank:66,odds:"+40000"}, CRO:{rank:12,odds:"+2500"},
+      ENG:{rank:4,odds:"+600"}, GHA:{rank:64,odds:"+15000"}, PAN:{rank:85,odds:"+25000"}
     };
 
-    // State Variables
     let allTeams = [];
     let bracketName = "";
     let picks = {};
-    const bracketState = {
-      r32: {}, r16: {}, qf: {}, sf: {}, final: {}
-    };
+    const bracketState = { r32:{}, r16:{}, qf:{}, sf:{}, final:{} };
+    const resultsLookup = { r32:{}, r16:{}, qf:{}, sf:{}, final:{}, champion:null };
 
-    const resultsLookup = {
-      r32: {}, r16: {}, qf: {}, sf: {}, final: {}, champion: null
-    };
-
-    // Initialize State Structures
     function initStructures() {
-      for (let i = 1; i <= 16; i++) bracketState.r32["match" + i] = { team1: null, team2: null };
-      for (let i = 1; i <= 8; i++) bracketState.r16["match" + i] = { team1: null, team2: null };
-      for (let i = 1; i <= 4; i++) bracketState.qf["match" + i] = { team1: null, team2: null };
-      for (let i = 1; i <= 2; i++) bracketState.sf["match" + i] = { team1: null, team2: null };
-      bracketState.final.match1 = { team1: null, team2: null };
+      for (let i=1;i<=16;i++) bracketState.r32["match"+i]={team1:null,team2:null};
+      for (let i=1;i<=8;i++) bracketState.r16["match"+i]={team1:null,team2:null};
+      for (let i=1;i<=4;i++) bracketState.qf["match"+i]={team1:null,team2:null};
+      for (let i=1;i<=2;i++) bracketState.sf["match"+i]={team1:null,team2:null};
+      bracketState.final.match1={team1:null,team2:null};
     }
 
-    // Get team details
-    function getTeam(teamId) {
-      return allTeams.find(t => t.id === teamId) || null;
-    }
+    function getTeam(teamId) { return allTeams.find(t=>t.id===teamId)||null; }
+    function getBracketId() { return new URLSearchParams(window.location.search).get("id"); }
 
-    // Extract query parameter
-    function getBracketId() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("id");
-    }
-
-    // Load page data
     async function loadData() {
-      const bracketId = getBracketId();
-      if (!bracketId) {
-        showError();
-        return;
-      }
-
-      document.getElementById("shareLinkUrl").innerText = window.location.href;
-
+      const bracketId=getBracketId();
+      if (!bracketId) { showError(); return; }
+      document.getElementById("shareLinkUrl").innerText=window.location.href;
       try {
-        // Fetch teams, bracket, and results concurrently
-        const [teamsRes, bracketRes, resultsRes] = await Promise.all([
+        const [teamsRes,bracketRes,resultsRes]=await Promise.all([
           fetch(`${API_BASE}/teams`),
           fetch(`${API_BASE}/bracket/${bracketId}`),
           fetch(`${API_BASE}/results`)
         ]);
-
-        if (!teamsRes.ok || !bracketRes.ok) throw new Error("API load failure");
-
-        allTeams = await teamsRes.json();
-        const bracketData = await bracketRes.json();
-        let resultsData = [];
-        try {
-          if (resultsRes.ok) {
-            resultsData = await resultsRes.json();
-          }
-        } catch (e) {
-          console.warn("Could not load match results:", e);
-        }
-
-        // Process results
+        if (!teamsRes.ok||!bracketRes.ok) throw new Error("API load failure");
+        allTeams=await teamsRes.json();
+        const bracketData=await bracketRes.json();
+        let resultsData=[];
+        try { if (resultsRes.ok) resultsData=await resultsRes.json(); } catch(e) {}
         parseResults(resultsData);
-
-        // Populate bracket details
-        bracketName = bracketData.name;
-        picks = bracketData.picks;
-
-        document.getElementById("bracketTitle").innerText = `${bracketName}'s Bracket`;
-        document.getElementById("creatorName").innerText = bracketName;
-
-        // Rebuild R32 slots
+        bracketName=bracketData.name;
+        picks=bracketData.picks;
+        document.getElementById("bracketTitle").innerText=`${bracketName}'s Bracket`;
+        document.getElementById("creatorName").innerText=bracketName;
         if (picks.r32_slots) {
-          for (let m in picks.r32_slots) {
-            bracketState.r32[m] = {
-              team1: picks.r32_slots[m].team1,
-              team2: picks.r32_slots[m].team2
-            };
-          }
+          for (let m in picks.r32_slots) bracketState.r32[m]={team1:picks.r32_slots[m].team1,team2:picks.r32_slots[m].team2};
         } else {
-          // Fallback reconstruction: place the winners in the slots
-          // Note: without r32_slots, losers are unknown. We put the winner in team1.
-          for (let m in picks.r32) {
-            bracketState.r32[m] = {
-              team1: picks.r32[m],
-              team2: null
-            };
-          }
+          for (let m in picks.r32) bracketState.r32[m]={team1:picks.r32[m],team2:null};
         }
-
-        // Propagate winners forward to build subsequent round slots
         propagateWinners();
-
-        // Calculate score
         calculateScore();
-
-        // Render bracket DOM
         renderBracket();
-
-        // Toggle page states
-        document.getElementById("loadingState").style.display = "none";
-        document.getElementById("viewWrapper").style.display = "flex";
-
-      } catch (err) {
-        console.error(err);
-        showError();
+        document.getElementById("loadingState").style.display="none";
+        document.getElementById("viewWrapper").style.display="flex";
+      } catch(err) {
+        console.error(err); showError();
       }
     }
 
     function showError() {
-      document.getElementById("loadingState").style.display = "none";
-      document.getElementById("errorState").style.display = "block";
+      document.getElementById("loadingState").style.display="none";
+      document.getElementById("errorState").style.display="block";
     }
 
     function parseResults(resultsData) {
       if (Array.isArray(resultsData)) {
-        resultsData.forEach(item => {
-          const r = item.round;
-          const m = item.match || item.matchId || item.id;
-          const w = item.winner;
-          if (r && m && w) {
-            resultsLookup[r][m] = w;
-          }
-          if (item.champion) {
-            resultsLookup.champion = item.champion;
-          }
+        resultsData.forEach(item=>{
+          const r=item.round, m=item.match||item.matchId||item.id, w=item.winner;
+          if (r&&m&&w) resultsLookup[r][m]=w;
+          if (item.champion) resultsLookup.champion=item.champion;
         });
-      } else if (resultsData && typeof resultsData === 'object') {
-        for (let round in resultsLookup) {
-          if (round === 'champion') {
-            resultsLookup.champion = resultsData.champion || null;
-          } else if (resultsData[round]) {
-            for (let m in resultsData[round]) {
-              resultsLookup[round][m] = resultsData[round][m];
-            }
-          }
-        }
       }
     }
 
     function propagateWinners() {
-      // Propagate R32 to R16
-      for (let i = 1; i <= 16; i++) {
-        const winner = picks.r32["match" + i];
-        if (winner) {
-          const childMatchNum = Math.floor((i - 1) / 2) + 1;
-          const childSlot = (i % 2 !== 0) ? 'team1' : 'team2';
-          bracketState.r16["match" + childMatchNum][childSlot] = winner;
-        }
-      }
-      // Propagate R16 to QF
-      for (let i = 1; i <= 8; i++) {
-        const winner = picks.r16["match" + i];
-        if (winner) {
-          const childMatchNum = Math.floor((i - 1) / 2) + 1;
-          const childSlot = (i % 2 !== 0) ? 'team1' : 'team2';
-          bracketState.qf["match" + childMatchNum][childSlot] = winner;
-        }
-      }
-      // Propagate QF to SF
-      for (let i = 1; i <= 4; i++) {
-        const winner = picks.qf["match" + i];
-        if (winner) {
-          const childMatchNum = Math.floor((i - 1) / 2) + 1;
-          const childSlot = (i % 2 !== 0) ? 'team1' : 'team2';
-          bracketState.sf["match" + childMatchNum][childSlot] = winner;
-        }
-      }
-      // Propagate SF to Final
-      for (let i = 1; i <= 2; i++) {
-        const winner = picks.sf["match" + i];
-        if (winner) {
-          const childSlot = (i === 1) ? 'team1' : 'team2';
-          bracketState.final.match1[childSlot] = winner;
-        }
-      }
+      for (let i=1;i<=16;i++) { const w=picks.r32["match"+i]; if(w){const c=Math.floor((i-1)/2)+1;bracketState.r16["match"+c][(i%2!==0)?'team1':'team2']=w;} }
+      for (let i=1;i<=8;i++) { const w=picks.r16["match"+i]; if(w){const c=Math.floor((i-1)/2)+1;bracketState.qf["match"+c][(i%2!==0)?'team1':'team2']=w;} }
+      for (let i=1;i<=4;i++) { const w=picks.qf["match"+i]; if(w){const c=Math.floor((i-1)/2)+1;bracketState.sf["match"+c][(i%2!==0)?'team1':'team2']=w;} }
+      for (let i=1;i<=2;i++) { const w=picks.sf["match"+i]; if(w){bracketState.final.match1[(i===1)?'team1':'team2']=w;} }
     }
 
-    // Points system: R32=10, R16=20, QF=40, SF=80, Final=160, Champion=320
     function calculateScore() {
-      let score = 0;
-      let correctCount = 0;
-
-      // Helper to check match result
-      function checkMatch(round, matchId, points) {
-        const pick = picks[round][matchId];
-        const actual = resultsLookup[round][matchId];
-        if (pick && actual && pick === actual) {
-          score += points;
-          correctCount++;
-          return true;
-        }
+      let score=0, correctCount=0;
+      function checkMatch(round,matchId,points) {
+        const pick=picks[round][matchId], actual=resultsLookup[round][matchId];
+        if (pick&&actual&&pick===actual) { score+=points; correctCount++; return true; }
         return false;
       }
-
-      for (let i = 1; i <= 16; i++) checkMatch("r32", "match" + i, 10);
-      for (let i = 1; i <= 8; i++) checkMatch("r16", "match" + i, 20);
-      for (let i = 1; i <= 4; i++) checkMatch("qf", "match" + i, 40);
-      for (let i = 1; i <= 2; i++) checkMatch("sf", "match" + i, 80);
-      checkMatch("final", "match1", 160);
-
-      // Champion check
-      if (picks.champion && resultsLookup.champion && picks.champion === resultsLookup.champion) {
-        score += 320;
-        correctCount++;
-      }
-
-      document.getElementById("bracketScore").innerText = score;
-      document.getElementById("correctMatchesCount").innerText = `(${correctCount}/32 correct picks)`;
+      for (let i=1;i<=16;i++) checkMatch("r32","match"+i,10);
+      for (let i=1;i<=8;i++) checkMatch("r16","match"+i,20);
+      for (let i=1;i<=4;i++) checkMatch("qf","match"+i,40);
+      for (let i=1;i<=2;i++) checkMatch("sf","match"+i,80);
+      checkMatch("final","match1",160);
+      if (picks.champion&&resultsLookup.champion&&picks.champion===resultsLookup.champion) { score+=320; correctCount++; }
+      document.getElementById("bracketScore").innerText=score;
+      document.getElementById("correctMatchesCount").innerText=`(${correctCount}/32 correct picks)`;
     }
 
-    // Render single slot in a match with result highlights
     function renderSlotHtml(round, matchNum, teamId, isWinnerPicked) {
-      if (!teamId) {
-        return `
-          <div class="match-slot empty">
-            <span>TBD</span>
-          </div>
-        `;
-      }
-
-      const team = getTeam(teamId);
+      if (!teamId) return `<div class="match-slot empty"><span>TBD</span></div>`;
+      const team=getTeam(teamId);
       if (!team) return "";
-
-      let statusClass = ""; // Correct, incorrect, or normal winner highlight
-      let textDecoration = "";
-
-      const actualWinner = resultsLookup[round]["match" + matchNum];
-      
+      let statusClass="", textDecoration="";
+      const actualWinner=resultsLookup[round]["match"+matchNum];
       if (actualWinner) {
-        if (teamId === actualWinner) {
-          statusClass = "view-match-correct";
-        } else {
-          // If this team did not win, but the user picked it as a winner, it's incorrect
-          if (isWinnerPicked) {
-            statusClass = "view-match-incorrect";
-            textDecoration = "view-slot-incorrect-strike";
-          }
-        }
-      } else if (isWinnerPicked) {
-        statusClass = "view-match-winner-highlight";
-      }
-
-      const infoBtnHtml = `<button class="slot-info-btn" onclick="event.stopPropagation(); showTeamTooltip(event, '${teamId}')">ℹ️</button>`;
-
+        if (teamId===actualWinner) statusClass="view-match-correct";
+        else if (isWinnerPicked) { statusClass="view-match-incorrect"; textDecoration="view-slot-incorrect-strike"; }
+      } else if (isWinnerPicked) statusClass="view-match-winner-highlight";
       return `
         <div class="match-slot ${statusClass}">
           <div class="team-display ${textDecoration}">
-            <span class="team-flag">${team.flag}</span>
+            <span class="team-flag">${getFlagEmoji(team.id)}</span>
             <span class="team-name">${team.name}</span>
           </div>
-          ${infoBtnHtml}
-        </div>
-      `;
+          <button class="slot-info-btn" onclick="event.stopPropagation();showTeamTooltip(event,'${teamId}')">ℹ️</button>
+        </div>`;
     }
 
-    // Render round list
     function renderRound(roundName, matchCount) {
-      const container = document.getElementById(`round-${roundName}`);
-      container.innerHTML = "";
-
-      for (let i = 1; i <= matchCount; i++) {
-        const match = bracketState[roundName]["match" + i];
-        const winner = picks[roundName]["match" + i];
-
-        const card = document.createElement("div");
-        card.className = "match-card";
-
-        card.innerHTML = `
-          <div class="match-header">
-            <span>Match ${i}</span>
-          </div>
-          ${renderSlotHtml(roundName, i, match.team1, winner && winner === match.team1)}
-          ${renderSlotHtml(roundName, i, match.team2, winner && winner === match.team2)}
-        `;
-
+      const container=document.getElementById(`round-${roundName}`);
+      container.innerHTML="";
+      for (let i=1;i<=matchCount;i++) {
+        const match=bracketState[roundName]["match"+i];
+        const winner=picks[roundName]["match"+i];
+        const card=document.createElement("div");
+        card.className="match-card";
+        card.innerHTML=`
+          <div class="match-header"><span>Match ${i}</span></div>
+          ${renderSlotHtml(roundName,i,match.team1,winner&&winner===match.team1)}
+          ${renderSlotHtml(roundName,i,match.team2,winner&&winner===match.team2)}`;
         container.appendChild(card);
       }
     }
 
-    // Render entire bracket
     function renderBracket() {
-      renderRound("r32", 16);
-      renderRound("r16", 8);
-      renderRound("qf", 4);
-      renderRound("sf", 2);
-      renderRound("final", 1);
-
-      // Render Champion
-      const championCard = document.getElementById("championCard");
+      renderRound("r32",16); renderRound("r16",8); renderRound("qf",4); renderRound("sf",2); renderRound("final",1);
+      const cc=document.getElementById("championCard");
       if (picks.champion) {
-        const team = getTeam(picks.champion);
+        const team=getTeam(picks.champion);
         if (team) {
-          championCard.classList.remove("empty");
-          
-          let champStatus = "";
-          if (resultsLookup.champion) {
-            champStatus = (picks.champion === resultsLookup.champion) ? "view-match-correct" : "view-match-incorrect";
-          } else {
-            champStatus = "view-match-winner-highlight";
-          }
-          
-          championCard.className = `champion-card ${champStatus}`;
-          document.getElementById("championName").innerHTML = `
-            <span class="team-flag" style="font-size:2rem; display:block; margin-bottom:0.25rem;">${team.flag}</span>
-            <span class="team-name" style="font-weight:800; font-size:1.1rem;">${team.name}</span>
-          `;
-          championCard.onclick = () => showTeamTooltip(event, team.id);
+          cc.classList.remove("empty");
+          let champStatus="";
+          if (resultsLookup.champion) champStatus=(picks.champion===resultsLookup.champion)?"view-match-correct":"view-match-incorrect";
+          else champStatus="view-match-winner-highlight";
+          cc.className=`champion-card ${champStatus}`;
+          document.getElementById("championName").innerHTML=`
+            <span class="team-flag" style="font-size:2rem;display:block;margin-bottom:0.25rem;">${getFlagEmoji(team.id)}</span>
+            <span class="team-name" style="font-weight:800;font-size:1.1rem;">${team.name}</span>`;
+          cc.onclick=()=>showTeamTooltip(event,team.id);
         }
       } else {
-        championCard.className = "champion-card empty";
-        document.getElementById("championName").innerText = "TBD";
-        championCard.onclick = null;
+        cc.className="champion-card empty";
+        document.getElementById("championName").innerText="TBD";
+        cc.onclick=null;
       }
     }
 
-    // Tooltip Info Display
     function showTeamTooltip(e, teamId) {
-      const tooltip = document.getElementById("teamTooltip");
-      const team = getTeam(teamId);
+      const tooltip=document.getElementById("teamTooltip");
+      const team=getTeam(teamId);
       if (!team) return;
-
-      const info = TEAM_INFO[teamId] || { rank: "N/A", odds: "N/A" };
-
-      tooltip.innerHTML = `
-        <div class="tooltip-title">
-          <span>${team.flag}</span>
-          <span>${team.name}</span>
-        </div>
-        <div class="tooltip-row">
-          <span>FIFA Rank:</span>
-          <strong>#${info.rank}</strong>
-        </div>
-        <div class="tooltip-row">
-          <span>Odds:</span>
-          <strong>${info.odds}</strong>
-        </div>
-        <div class="tooltip-row">
-          <span>Group:</span>
-          <strong>Group ${team.group_letter}</strong>
-        </div>
-        <div class="tooltip-row" style="margin-top:0.5rem; font-size:0.75rem; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.25rem; justify-content:center;">
-          <span>ID: ${team.id}</span>
-        </div>
-      `;
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = rect.left + window.scrollX;
-      const y = rect.top + window.scrollY - 100;
-
-      tooltip.style.left = `${Math.min(window.innerWidth - 240, Math.max(10, x - 100))}px`;
-      tooltip.style.top = `${y}px`;
+      const info=TEAM_INFO[teamId]||{rank:"N/A",odds:"N/A"};
+      tooltip.innerHTML=`
+        <div class="tooltip-title"><span>${getFlagEmoji(team.id)}</span><span>${team.name}</span></div>
+        <div class="tooltip-row"><span>FIFA Rank:</span><strong>#${info.rank}</strong></div>
+        <div class="tooltip-row"><span>Odds:</span><strong>${info.odds}</strong></div>
+        <div class="tooltip-row"><span>Group:</span><strong>Group ${team.group_letter}</strong></div>`;
+      const rect=e.currentTarget.getBoundingClientRect();
+      tooltip.style.left=`${Math.min(window.innerWidth-240,Math.max(10,rect.left+window.scrollX-100))}px`;
+      tooltip.style.top=`${rect.top+window.scrollY-100}px`;
       tooltip.classList.add("active");
-
-      const closeHandler = () => {
-        tooltip.classList.remove("active");
-        document.removeEventListener("click", closeHandler);
-      };
-
-      setTimeout(() => {
-        document.addEventListener("click", closeHandler);
-      }, 50);
+      setTimeout(()=>{ document.addEventListener("click",()=>tooltip.classList.remove("active"),{once:true}); },50);
     }
 
-    // Toast helper
     function showToast(msg) {
-      const toast = document.getElementById("toastMessage");
-      toast.innerText = msg;
-      toast.classList.add("show");
-      setTimeout(() => {
-        toast.classList.remove("show");
-      }, 2500);
+      const toast=document.getElementById("toastMessage");
+      toast.innerText=msg; toast.classList.add("show");
+      setTimeout(()=>toast.classList.remove("show"),2500);
     }
 
-    // Copy Shareable Link
-    document.getElementById("copyLinkBtn").addEventListener("click", () => {
-      const shareUrl = window.location.href;
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        showToast("Link Copied!");
-      }).catch(err => {
-        console.error("Failed to copy link", err);
-      });
+    document.getElementById("copyLinkBtn").addEventListener("click",()=>{
+      navigator.clipboard.writeText(window.location.href).then(()=>showToast("Link Copied!")).catch(console.error);
     });
 
-    // Standalone HTML Download
-    document.getElementById("downloadHtmlBtn").addEventListener("click", () => {
-      // Gather stylesheet content
-      let cssText = "";
+    document.getElementById("downloadHtmlBtn").addEventListener("click",()=>{
+      let cssText="";
       for (let sheet of document.styleSheets) {
-        try {
-          if (sheet.cssRules) {
-            for (let rule of sheet.cssRules) {
-              cssText += rule.cssText + "\n";
-            }
-          }
-        } catch (e) {
-          // Fallback or ignore CORS sheet rules
-        }
+        try { if(sheet.cssRules) for(let rule of sheet.cssRules) cssText+=rule.cssText+"\n"; } catch(e){}
       }
-
-      // Clone bracket structure
-      const bracketContainerClone = document.getElementById("bracketContainer").cloneNode(true);
-      // Remove any onclick behaviors or buttons from clone
-      bracketContainerClone.querySelectorAll('.slot-info-btn').forEach(btn => btn.remove());
-      bracketContainerClone.querySelectorAll('.match-slot').forEach(slot => {
-        slot.removeAttribute('onclick');
-        slot.style.cursor = 'default';
-      });
-      const champCardClone = bracketContainerClone.querySelector('#championCard');
-      if (champCardClone) {
-        champCardClone.removeAttribute('onclick');
-        champCardClone.style.cursor = 'default';
-      }
-
-      const scoreText = document.getElementById("bracketScore").innerText;
-      const correctText = document.getElementById("correctMatchesCount").innerText;
-
-      // Standalone HTML Template
-      const htmlContent = `<!DOCTYPE html>
+      const clone=document.getElementById("bracketContainer").cloneNode(true);
+      clone.querySelectorAll('.slot-info-btn').forEach(b=>b.remove());
+      clone.querySelectorAll('.match-slot').forEach(s=>{s.removeAttribute('onclick');s.style.cursor='default';});
+      const cc=clone.querySelector('#championCard');
+      if(cc){cc.removeAttribute('onclick');cc.style.cursor='default';}
+      const scoreText=document.getElementById("bracketScore").innerText;
+      const correctText=document.getElementById("correctMatchesCount").innerText;
+      const htmlContent=`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FIFA World Cup 2026 Bracket - ${bracketName}</title>
-  <style>
-    ${cssText || `
-      /* Fallback style elements */
-      body { background-color: #070b08; color: #fff; font-family: sans-serif; }
-      .bracket-container { display: flex; gap: 2rem; padding: 2rem; overflow-x: auto; }
-      .bracket-round { display: flex; flex-direction: column; justify-content: space-around; min-width: 250px; gap: 1rem; }
-      .match-card { background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
-      .match-slot { display: flex; justify-content: space-between; padding: 0.5rem; border-radius: 8px; margin-top: 0.25rem; }
-      .selected-winner { background: rgba(0, 230, 118, 0.2); }
-      .view-match-correct { background: rgba(0, 230, 118, 0.15); border: 1px solid #00e676; }
-      .view-match-incorrect { background: rgba(255, 23, 68, 0.15); border: 1px solid #ff1744; }
-    `}
-  </style>
+  <style>${cssText}</style>
 </head>
 <body>
   <div class="app-container">
-    <header style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:1rem; margin-bottom:2rem;">
-      <div style="font-weight:800; font-size:1.5rem; text-transform:uppercase;">🏆 FIFA2026<span style="color:#00e676;">Bracket</span></div>
-      <div style="font-size:0.85rem; color:#94a3b8;">Offline Standalone Copy</div>
+    <header style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:1rem;margin-bottom:2rem;">
+      <div style="font-weight:800;font-size:1.5rem;text-transform:uppercase;">🏆 FIFA2026<span style="color:#00e676;">Bracket</span></div>
+      <div style="font-size:0.85rem;color:#94a3b8;">Offline Standalone Copy</div>
     </header>
-    
     <main class="bracket-wrapper">
-      <div style="background:#0c120e; border:1px solid rgba(255,255,255,0.08); padding:1.5rem; border-radius:16px; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center;">
+      <div style="background:#0c120e;border:1px solid rgba(255,255,255,0.08);padding:1.5rem;border-radius:16px;margin-bottom:2rem;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <h2 style="margin:0; font-size:1.6rem;">${bracketName}'s Bracket</h2>
-          <p style="color:#94a3b8; font-size:0.9rem; margin-top:0.25rem;">Saved offline file. Downloaded on ${new Date().toLocaleDateString()}</p>
+          <h2 style="margin:0;font-size:1.6rem;">${bracketName}'s Bracket</h2>
+          <p style="color:#94a3b8;font-size:0.9rem;margin-top:0.25rem;">Downloaded on ${new Date().toLocaleDateString()}</p>
         </div>
-        <div style="background:rgba(0, 230, 118, 0.15); border:1px solid #00e676; padding:0.5rem 1rem; border-radius:12px; font-weight:700; display:flex; align-items:center; gap:0.5rem;">
-          Score: <span style="background:#fff; color:#070b08; padding:0.1rem 0.5rem; border-radius:6px; font-size:1.2rem;">${scoreText}</span> <span style="font-size:0.8rem; color:#fff;">${correctText}</span>
+        <div style="background:rgba(0,230,118,0.15);border:1px solid #00e676;padding:0.5rem 1rem;border-radius:12px;font-weight:700;display:flex;align-items:center;gap:0.5rem;">
+          Score: <span style="background:#fff;color:#070b08;padding:0.1rem 0.5rem;border-radius:6px;font-size:1.2rem;">${scoreText}</span>
+          <span style="font-size:0.8rem;color:#fff;">${correctText}</span>
         </div>
       </div>
-      
-      <div class="bracket-container" style="display:flex; gap:3rem; padding: 2rem 0; overflow-x:auto;">
-        ${bracketContainerClone.innerHTML}
-      </div>
+      <div class="bracket-container">${clone.innerHTML}</div>
     </main>
   </div>
 </body>
 </html>`;
-
-      // Create download blob
-      const blob = new Blob([htmlContent], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `world_cup_2026_bracket_${bracketName.toLowerCase().replace(/\s+/g, '_')}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const blob=new Blob([htmlContent],{type:"text/html"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url; a.download=`wc2026_bracket_${bracketName.toLowerCase().replace(/\s+/g,'_')}.html`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     });
 
-    // Start
     initStructures();
     loadData();
   </script>

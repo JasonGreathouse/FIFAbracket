@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA World Cup 2026 Bracket Challenge</title>
+  <meta name="description" content="Predict the 2026 FIFA World Cup knockout stage. Build your bracket, select your teams, and climb the leaderboard!">
+  <link rel="stylesheet" href="index.css">
+  <!-- HTML5 Semantic & SEO Tags -->
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <a href="index.html" class="logo-container">
+        <span class="logo-emoji">🏆</span>
+        <span class="logo-text">FIFA2026<span>Bracket</span></span>
+      </a>
+      <a href="leaderboard.html" class="btn btn-secondary">Leaderboard</a>
+    </header>
+
+    <main class="hero-section">
+      <div class="hero-badge">⚽ Knockout Stage Prediction</div>
+      <h1 class="hero-title">Predict the Champion of <span>World Cup 2026</span></h1>
+      <p class="hero-subtitle">
+        The ultimate prediction challenge. Manually select your 32-team Round of 32 matches, make your path, and showcase your soccer wisdom.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="bracket.html" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">🏆 Make Your Bracket</a>
+        <a href="leaderboard.html" class="btn btn-secondary" style="font-size: 1.1rem; padding: 1rem 2rem;">📊 View Leaderboard</a>
+      </div>
+
+      <!-- Feature highlights section -->
+      <style>
+        .features-grid {
+          display: flex;
+          gap: 1.5rem;
+          margin-top: 5rem;
+          flex-wrap: wrap;
+          justify-content: center;
+          width: 100%;
+          max-width: 900px;
+        }
+        .feature-card {
+          flex: 1 1 250px;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid var(--border-color);
+          padding: 1.5rem;
+          border-radius: 16px;
+          transition: var(--transition-smooth);
+        }
+        .feature-card:hover {
+          border-color: var(--accent-green);
+          transform: translateY(-4px);
+        }
+        .feature-icon {
+          font-size: 2rem;
+          margin-bottom: 0.75rem;
+        }
+        .feature-card h3 {
+          margin-bottom: 0.5rem;
+          font-weight: 700;
+        }
+        .feature-card p {
+          color: var(--text-secondary);
+          font-size: 0.9rem;
+        }
+      </style>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">✨</div>
+          <h3>Custom Seeding</h3>
+          <p>Hand-select your 32 qualified teams. Create the exact Round of 32 matchups you believe will happen.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Dynamic Flow</h3>
+          <p>Cascade picks from Round of 32 to the Finals with instant updates and full support for downstream resets.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📈</div>
+          <h3>Real-time Score</h3>
+          <p>Compare your predictions with official match results and climb to the top of the leaderboard.</p>
+        </div>
+      </div>
+    </main>
+
+    <footer style="margin-top: auto; padding: 2rem 0; text-align: center; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border-color);">
+      <p>&copy; 2026 World Cup Bracket Predictor. All national flags and soccer assets are used for entertainment purposes.</p>
+    </footer>
+  </div>
+
+</body>
+</html>

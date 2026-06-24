@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA World Cup 2026 Bracket Builder</title>
+  <meta name="description" content="Build your 2026 FIFA World Cup knockout bracket. Select your 32 teams and predict the champion!">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <a href="index.html" class="logo-container">
+        <span class="logo-emoji">🏆</span>
+        <span class="logo-text">FIFA2026<span>Bracket</span></span>
+      </a>
+      <a href="leaderboard.html" class="btn btn-secondary">Leaderboard</a>
+    </header>
+
+    <main class="bracket-wrapper">
+      <div class="instructions-alert" id="instructionMessage">
+        <span>💡</span>
+        <span>Start by manually selecting teams for the 32 slots in the Round of 32. Once both teams in a match are selected, click a team to pick the winner!</span>
+      </div>
+
+      <div class="bracket-meta">
+        <div class="meta-info-text">
+          <p>Status: <strong id="bracketProgressText">0/31 picks completed</strong></p>
+        </div>
+        <div class="name-input-group">
+          <input type="text" id="userNameInput" class="name-input" placeholder="Enter your display name" maxlength="30">
+          <button id="submitBracketBtn" class="btn btn-primary">Submit Bracket</button>
+        </div>
+      </div>
+
+      <!-- Horizontal scrolling bracket area -->
+      <div class="bracket-container" id="bracketContainer">
+        <!-- R32 Column -->
+        <div class="bracket-round" id="round-r32">
+          <!-- 16 matches populated dynamically -->
+        </div>
+
+        <!-- R16 Column -->
+        <div class="bracket-round" id="round-r16">
+          <!-- 8 matches populated dynamically -->
+        </div>
+
+        <!-- QF Column -->
+        <div class="bracket-round" id="round-qf">
+          <!-- 4 matches populated dynamically -->
+        </div>
+
+        <!-- SF Column -->
+        <div class="bracket-round" id="round-sf">
+          <!-- 2 matches populated dynamically -->
+        </div>
+
+        <!-- Final Column -->
+        <div class="bracket-round" id="round-final">
+          <!-- 1 match populated dynamically -->
+        </div>
+
+        <!-- Champion Column -->
+        <div class="bracket-round" id="round-champion">
+          <div class="champion-wrapper">
+            <div class="champion-title-text">Champion</div>
+            <div class="champion-card empty" id="championCard">
+              <div class="champion-badge">Winner</div>
+              <div class="empty-state-icon" style="font-size: 2rem; margin-bottom: 0px;">🏆</div>
+              <span id="championName">TBD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Custom Searchable Dropdown Modal -->
+    <div class="selector-modal" id="teamSelectorModal">
+      <div class="selector-container">
+        <div class="selector-header">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+            <h3>Select a Team</h3>
+            <button class="btn btn-danger" id="clearSlotBtn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Clear Slot</button>
+          </div>
+          <div class="search-wrapper">
+            <input type="text" class="search-input" id="teamSearchInput" placeholder="Search team by name or group...">
+            <button class="clear-search-btn" id="clearSearchBtn">&times;</button>
+          </div>
+        </div>
+        <div class="team-list-options" id="teamListOptions">
+          <!-- Team options populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Hover/Tap Tooltip Container -->
+    <div class="tooltip-container" id="teamTooltip">
+      <!-- Tooltip contents populated dynamically -->
+    </div>
+
+    <div class="toast" id="toastMessage">Bracket Saved!</div>
+  </div>
+
+  <!-- JS Logic -->
+  <script>
+    const API_BASE = "https://fifabracket-api.jason-greathouse.workers.dev";
+
+    // Static FIFA Ranking and pre-tournament odds data
+    const TEAM_INFO = {
+      CZE: { rank: 35, odds: "+15000" },
+      KOR: { rank: 22, odds: "+8000" },
+      MEX: { rank: 15, odds: "+5000" },
+      RSA: { rank: 59, odds: "+20000" },
+      BIH: { rank: 74, odds: "+30000" },
+      CAN: { rank: 40, odds: "+8000" },
+      QAT: { rank: 34, odds: "+25000" },
+      SUI: { rank: 19, odds: "+5000" },
+      BRA: { rank: 5, odds: "+550" },
+      HAI: { rank: 86, odds: "+50000" },
+      MAR: { rank: 13, odds: "+2500" },
+      SCO: { rank: 39, odds: "+20000" },
+      AUS: { rank: 24, odds: "+10000" },
+      PAR: { rank: 56, odds: "+15000" },
+      TUR: { rank: 26, odds: "+8000" },
+      USA: { rank: 16, odds: "+3300" },
+      CIV: { rank: 30, odds: "+8000" },
+      CUW: { rank: 90, odds: "+75000" },
+      ECU: { rank: 29, odds: "+6600" },
+      GER: { rank: 8, odds: "+900" },
+      JPN: { rank: 18, odds: "+4000" },
+      NED: { rank: 7, odds: "+1400" },
+      SWE: { rank: 25, odds: "+8000" },
+      TUN: { rank: 41, odds: "+20000" },
+      BEL: { rank: 10, odds: "+1600" },
+      EGY: { rank: 36, odds: "+15000" },
+      IRN: { rank: 20, odds: "+8000" },
+      NZL: { rank: 104, odds: "+50000" },
+      CPV: { rank: 65, odds: "+30000" },
+      ESP: { rank: 3, odds: "+500" },
+      KSA: { rank: 53, odds: "+25000" },
+      URU: { rank: 11, odds: "+1200" },
+      FRA: { rank: 2, odds: "+450" },
+      IRQ: { rank: 58, odds: "+25000" },
+      NOR: { rank: 44, odds: "+10000" },
+      SEN: { rank: 21, odds: "+6600" },
+      ALG: { rank: 37, odds: "+12000" },
+      ARG: { rank: 1, odds: "+400" },
+      AUT: { rank: 23, odds: "+6600" },
+      JOR: { rank: 71, odds: "+40000" },
+      COD: { rank: 62, odds: "+25000" },
+      COL: { rank: 9, odds: "+1600" },
+      POR: { rank: 6, odds: "+750" },
+      UZB: { rank: 66, odds: "+40000" },
+      CRO: { rank: 12, odds: "+2500" },
+      ENG: { rank: 4, odds: "+600" },
+      GHA: { rank: 64, odds: "+15000" },
+      PAN: { rank: 85, odds: "+25000" }
+    };
+
+    // State Variables
+    let allTeams = [];
+    const bracketState = {
+      r32: {},
+      r16: {},
+      qf: {},
+      sf: {},
+      final: {}
+    };
+
+    const picks = {
+      r32: {},
+      r16: {},
+      qf: {},
+      sf: {},
+      final: {},
+      champion: null
+    };
+
+    // Active Selection Tracking
+    let activeSelectorSlot = null; // { round, matchNum, slot }
+
+    // Initialize State Structures
+    function initStructures() {
+      // 16 R32 matches
+      for (let i = 1; i <= 16; i++) {
+        bracketState.r32["match" + i] = { team1: null, team2: null };
+        picks.r32["match" + i] = null;
+      }
+      // 8 R16 matches
+      for (let i = 1; i <= 8; i++) {
+        bracketState.r16["match" + i] = { team1: null, team2: null };
+        picks.r16["match" + i] = null;
+      }
+      // 4 QF matches
+      for (let i = 1; i <= 4; i++) {
+        bracketState.qf["match" + i] = { team1: null, team2: null };
+        picks.qf["match" + i] = null;
+      }
+      // 2 SF matches
+      for (let i = 1; i <= 2; i++) {
+        bracketState.sf["match" + i] = { team1: null, team2: null };
+        picks.sf["match" + i] = null;
+      }
+      // 1 Final match
+      bracketState.final.match1 = { team1: null, team2: null };
+      picks.final.match1 = null;
+      picks.champion = null;
+    }
+
+    // Fetch Teams
+    async function loadTeams() {
+      try {
+        const res = await fetch(`${API_BASE}/teams`);
+        if (!res.ok) throw new Error("Failed to fetch teams");
+        allTeams = await res.json();
+        // Sort teams alphabetically by name
+        allTeams.sort((a, b) => a.name.localeCompare(b.name));
+        renderBracket();
+      } catch (err) {
+        console.error(err);
+        showToast("Error loading teams. Please refresh.", true);
+      }
+    }
+
+    // Get Team details by ID
+    function getTeam(teamId) {
+      return allTeams.find(t => t.id === teamId) || null;
+    }
+
+    // Clear matching winner downstream and cascade resets
+    function clearWinnerAndCascade(round, matchNum) {
+      const currentWinner = picks[round]["match" + matchNum];
+      if (currentWinner) {
+        picks[round]["match" + matchNum] = null;
+      }
+
+      let childRound = null;
+      let childMatchNum = null;
+      let childSlot = null;
+
+      if (round === 'r32') {
+        childRound = 'r16';
+        childMatchNum = Math.floor((matchNum - 1) / 2) + 1;
+        childSlot = (matchNum % 2 !== 0) ? 'team1' : 'team2';
+      } else if (round === 'r16') {
+        childRound = 'qf';
+        childMatchNum = Math.floor((matchNum - 1) / 2) + 1;
+        childSlot = (matchNum % 2 !== 0) ? 'team1' : 'team2';
+      } else if (round === 'qf') {
+        childRound = 'sf';
+        childMatchNum = Math.floor((matchNum - 1) / 2) + 1;
+        childSlot = (matchNum % 2 !== 0) ? 'team1' : 'team2';
+      } else if (round === 'sf') {
+        childRound = 'final';
+        childMatchNum = 1;
+        childSlot = (matchNum === 1) ? 'team1' : 'team2';
+      } else if (round === 'final') {
+        picks.champion = null;
+        const championCard = document.getElementById("championCard");
+        championCard.classList.add("empty");
+        document.getElementById("championName").innerText = "TBD";
+        return;
+      }
+
+      if (childRound) {
+        bracketState[childRound]["match" + childMatchNum][childSlot] = null;
+        clearWinnerAndCascade(childRound, childMatchNum);
+      }
+    }
+
+    // Set Winner and propagate
+    function setMatchWinner(round, matchNum, teamId) {
+      // Set pick
+      picks[round]["match" + matchNum] = teamId;
+
+      let childRound = null;
+      let childMatchNum = null;
+      let childSlot = null;
+
+      if (round === 'r32') {
+        childRound = 'r16';
+        childMatchNum = Math.floor((matchNum - 1) / 2) + 1;
+        childSlot = (matchNum % 2 !== 0) ? 'team1' : 'team2';
+      } else if (round === 'r16') {
+        childRound = 'qf';
+        childMatchNum = Math.floor((matchNum - 1) / 2) + 1;
+        childSlot = (matchNum % 2 !== 0) ? 'team1' : 'team2';
+      } else if (round === 'qf') {
+        childRound = 'sf';
+        childMatchNum = Math.floor((matchNum - 1) / 2) + 1;
+        childSlot = (matchNum % 2 !== 0) ? 'team1' : 'team2';
+      } else if (round === 'sf') {
+        childRound = 'final';
+        childMatchNum = 1;
+        childSlot = (matchNum === 1) ? 'team1' : 'team2';
+      } else if (round === 'final') {
+        picks.champion = teamId;
+        const championCard = document.getElementById("championCard");
+        const t = getTeam(teamId);
+        if (t) {
+          championCard.classList.remove("empty");
+          document.getElementById("championName").innerHTML = `<span class="team-flag">${t.flag}</span> <span class="team-name">${t.name}</span>`;
+        }
+        updateProgress();
+        renderBracket();
+        return;
+      }
+
+      if (childRound) {
+        const oldChildTeam = bracketState[childRound]["match" + childMatchNum][childSlot];
+        bracketState[childRound]["match" + childMatchNum][childSlot] = teamId;
+
+        // If the team in the child slot changed, cascade reset winner
+        if (oldChildTeam !== teamId) {
+          clearWinnerAndCascade(childRound, childMatchNum);
+        }
+      }
+
+      updateProgress();
+      renderBracket();
+    }
+
+    // Calculate total completed picks
+    function updateProgress() {
+      let count = 0;
+      // Count R32
+      for (let k in picks.r32) if (picks.r32[k]) count++;
+      for (let k in picks.r16) if (picks.r16[k]) count++;
+      for (let k in picks.qf) if (picks.qf[k]) count++;
+      for (let k in picks.sf) if (picks.sf[k]) count++;
+      if (picks.final.match1) count++;
+      if (picks.champion) count++;
+
+      // 32 matches in bracket (16 + 8 + 4 + 2 + 1 = 31 matches + 1 champion = 32 points of decision)
+      document.getElementById("bracketProgressText").innerText = `${count}/32 picks completed`;
+    }
+
+    // Show Custom Selector Modal
+    function openSelector(round, matchNum, slot) {
+      activeSelectorSlot = { round, matchNum, slot };
+      
+      const modal = document.getElementById("teamSelectorModal");
+      const searchInput = document.getElementById("teamSearchInput");
+      searchInput.value = "";
+      
+      populateSelectorOptions();
+      modal.classList.add("active");
+      searchInput.focus();
+    }
+
+    function closeSelector() {
+      document.getElementById("teamSelectorModal").classList.remove("active");
+      activeSelectorSlot = null;
+    }
+
+    // Get list of all selected team IDs in R32 slots (excluding the active one)
+    function getSelectedR32Teams() {
+      const selected = [];
+      for (let m in bracketState.r32) {
+        const match = bracketState.r32[m];
+        if (match.team1 && !(activeSelectorSlot.round === 'r32' && activeSelectorSlot.matchNum == m.replace('match', '') && activeSelectorSlot.slot === 'team1')) {
+          selected.push(match.team1);
+        }
+        if (match.team2 && !(activeSelectorSlot.round === 'r32' && activeSelectorSlot.matchNum == m.replace('match', '') && activeSelectorSlot.slot === 'team2')) {
+          selected.push(match.team2);
+        }
+      }
+      return selected;
+    }
+
+    // Populate Selector Options (filtering out duplicates)
+    function populateSelectorOptions(query = "") {
+      const container = document.getElementById("teamListOptions");
+      container.innerHTML = "";
+      
+      const selectedTeams = getSelectedR32Teams();
+      const filtered = allTeams.filter(t => 
+        t.name.toLowerCase().includes(query.toLowerCase()) || 
+        t.id.toLowerCase().includes(query.toLowerCase()) ||
+        `group ${t.group_letter}`.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--text-secondary);">No teams found</div>';
+        return;
+      }
+
+      filtered.forEach(team => {
+        const isAlreadySelected = selectedTeams.includes(team.id);
+        const currentSlotTeam = bracketState[activeSelectorSlot.round]["match" + activeSelectorSlot.matchNum][activeSelectorSlot.slot];
+        const isCurrentSelection = currentSlotTeam === team.id;
+
+        const option = document.createElement("div");
+        option.className = `team-option ${isAlreadySelected ? 'disabled' : ''} ${isCurrentSelection ? 'selected' : ''}`;
+        
+        const info = TEAM_INFO[team.id] || { rank: "N/A", odds: "N/A" };
+        
+        option.innerHTML = `
+          <div class="team-display">
+            <span class="team-flag">${team.flag}</span>
+            <span class="team-name">${team.name} <span style="font-size:0.75rem; color:var(--text-secondary)">(${team.id})</span></span>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <span style="font-size:0.8rem; color:var(--text-secondary)">Grp ${team.group_letter}</span>
+            <span class="team-option-meta">Rank #${info.rank}</span>
+          </div>
+        `;
+
+        if (!isAlreadySelected) {
+          option.addEventListener("click", () => {
+            selectTeamForActiveSlot(team.id);
+          });
+        }
+        
+        container.appendChild(option);
+      });
+    }
+
+    function selectTeamForActiveSlot(teamId) {
+      const { round, matchNum, slot } = activeSelectorSlot;
+      bracketState[round]["match" + matchNum][slot] = teamId;
+      
+      // Since slot team changed, clear winner and cascade
+      clearWinnerAndCascade(round, matchNum);
+      
+      closeSelector();
+      updateProgress();
+      renderBracket();
+    }
+
+    // Clear active slot entirely
+    function clearActiveSlot() {
+      if (!activeSelectorSlot) return;
+      const { round, matchNum, slot } = activeSelectorSlot;
+      bracketState[round]["match" + matchNum][slot] = null;
+      
+      clearWinnerAndCascade(round, matchNum);
+      closeSelector();
+      updateProgress();
+      renderBracket();
+    }
+
+    // Setup searchable events
+    document.getElementById("teamSearchInput").addEventListener("input", (e) => {
+      populateSelectorOptions(e.target.value);
+    });
+
+    document.getElementById("clearSearchBtn").addEventListener("click", () => {
+      const input = document.getElementById("teamSearchInput");
+      input.value = "";
+      populateSelectorOptions("");
+      input.focus();
+    });
+
+    document.getElementById("clearSlotBtn").addEventListener("click", clearActiveSlot);
+
+    // Modal click out to close
+    document.getElementById("teamSelectorModal").addEventListener("click", (e) => {
+      if (e.target.id === "teamSelectorModal") {
+        closeSelector();
+      }
+    });
+
+    // Render helper for single slot in a match
+    function renderSlotHtml(round, matchNum, slot, teamId, isWinnerSelected) {
+      if (!teamId) {
+        // Empty slot (only editable in R32, otherwise shows placeholder)
+        if (round === 'r32') {
+          return `
+            <div class="match-slot empty" onclick="openSelector('${round}', ${matchNum}, '${slot}')">
+              <span>+ Select Team</span>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="match-slot empty">
+              <span>TBD</span>
+            </div>
+          `;
+        }
+      }
+
+      const team = getTeam(teamId);
+      if (!team) return "";
+
+      const winnerClass = isWinnerSelected ? "selected-winner" : "";
+      
+      // If Round of 32, slot header allows reselection. Clicking team itself selects as winner ONLY if both are present.
+      // But wait! User should be able to click to pick winner once both teams are present.
+      // If we are in R32, clicking the slot should open selector, UNLESS both slots are populated, in which case they can click to select the winner?
+      // Wait, the prompt says:
+      // "Each slot has a dropdown or searchable selector... Users manually select which team goes in each slot. Once both teams in a match are selected, the user can click to pick a winner which cascades forward."
+      // So if a slot in R32 is populated:
+      // We can have a distinct behavior: clicking the team select button (or flag/name area) changes the team, while once both are filled, a clickable area allows picking them as a winner!
+      // To make this super clean:
+      // Inside each populated slot, we display the flag + name.
+      // In R32, we add a tiny edit/dropdown arrow button. Clicking the edit arrow button opens the selector modal. Clicking the main slot body picks it as winner (if both are selected)!
+      // Let's implement this! It makes both functions extremely accessible.
+      const hasBothTeams = bracketState[round]["match" + matchNum].team1 && bracketState[round]["match" + matchNum].team2;
+      
+      let clickHandler = "";
+      if (hasBothTeams) {
+        clickHandler = `onclick="selectWinnerClick('${round}', ${matchNum}, '${teamId}')"`;
+      } else if (round === 'r32') {
+        // If not both teams, clicking anywhere in R32 slot opens selector
+        clickHandler = `onclick="openSelector('${round}', ${matchNum}, '${slot}')"`;
+      }
+
+      const editBtnHtml = (round === 'r32') 
+        ? `<button class="slot-info-btn" onclick="event.stopPropagation(); openSelector('${round}', ${matchNum}, '${slot}')" title="Change Team">⚙️</button>`
+        : "";
+
+      const infoBtnHtml = `<button class="slot-info-btn" onclick="event.stopPropagation(); showTeamTooltip(event, '${teamId}')" title="View Team Stats">ℹ️</button>`;
+
+      return `
+        <div class="match-slot ${winnerClass}" ${clickHandler}>
+          <div class="team-display">
+            <span class="team-flag">${team.flag}</span>
+            <span class="team-name">${team.name}</span>
+          </div>
+          <div style="display:flex; gap:0.25rem; align-items:center;">
+            ${editBtnHtml}
+            ${infoBtnHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function selectWinnerClick(round, matchNum, teamId) {
+      setMatchWinner(round, matchNum, teamId);
+    }
+
+    // Render matches for a round
+    function renderRound(roundName, matchCount) {
+      const container = document.getElementById(`round-${roundName}`);
+      container.innerHTML = "";
+
+      for (let i = 1; i <= matchCount; i++) {
+        const match = bracketState[roundName]["match" + i];
+        const winner = picks[roundName]["match" + i];
+        
+        const card = document.createElement("div");
+        card.className = "match-card";
+        
+        const hasBothTeams = match.team1 && match.team2;
+        const subTitle = hasBothTeams ? "Pick Winner" : (roundName === 'r32' ? "Select Teams" : "Waiting for prev rounds");
+        
+        card.innerHTML = `
+          <div class="match-header">
+            <span>Match ${i}</span>
+            <span style="color: ${hasBothTeams ? 'var(--accent-green)' : 'var(--text-secondary)'}">${subTitle}</span>
+          </div>
+          ${renderSlotHtml(roundName, i, "team1", match.team1, winner && winner === match.team1)}
+          ${renderSlotHtml(roundName, i, "team2", match.team2, winner && winner === match.team2)}
+        `;
+        
+        container.appendChild(card);
+      }
+    }
+
+    // Render full bracket
+    function renderBracket() {
+      renderRound("r32", 16);
+      renderRound("r16", 8);
+      renderRound("qf", 4);
+      renderRound("sf", 2);
+      renderRound("final", 1);
+      
+      // Update Champion Card
+      const championCard = document.getElementById("championCard");
+      if (picks.champion) {
+        const team = getTeam(picks.champion);
+        if (team) {
+          championCard.classList.remove("empty");
+          document.getElementById("championName").innerHTML = `
+            <span class="team-flag" style="font-size:2rem; display:block; margin-bottom:0.25rem;">${team.flag}</span>
+            <span class="team-name" style="font-weight:800; font-size:1.1rem;">${team.name}</span>
+          `;
+          championCard.onclick = () => showTeamTooltip(event, team.id);
+        }
+      } else {
+        championCard.classList.add("empty");
+        document.getElementById("championName").innerText = "TBD";
+        championCard.onclick = null;
+      }
+    }
+
+    // Tooltip Info Display
+    function showTeamTooltip(e, teamId) {
+      const tooltip = document.getElementById("teamTooltip");
+      const team = getTeam(teamId);
+      if (!team) return;
+
+      const info = TEAM_INFO[teamId] || { rank: "N/A", odds: "N/A" };
+      
+      tooltip.innerHTML = `
+        <div class="tooltip-title">
+          <span>${team.flag}</span>
+          <span>${team.name}</span>
+        </div>
+        <div class="tooltip-row">
+          <span>FIFA Rank:</span>
+          <strong>#${info.rank}</strong>
+        </div>
+        <div class="tooltip-row">
+          <span>Odds:</span>
+          <strong>${info.odds}</strong>
+        </div>
+        <div class="tooltip-row">
+          <span>Group:</span>
+          <strong>Group ${team.group_letter}</strong>
+        </div>
+        <div class="tooltip-row" style="margin-top:0.5rem; font-size:0.75rem; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.25rem; justify-content:center;">
+          <span>ID: ${team.id}</span>
+        </div>
+      `;
+
+      // Position tooltip near the click/event source
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = rect.left + window.scrollX;
+      const y = rect.top + window.scrollY - 100; // Place above
+      
+      tooltip.style.left = `${Math.min(window.innerWidth - 240, Math.max(10, x - 100))}px`;
+      tooltip.style.top = `${y}px`;
+      tooltip.classList.add("active");
+      
+      // Close tooltip when clicking elsewhere
+      const closeHandler = () => {
+        tooltip.classList.remove("active");
+        document.removeEventListener("click", closeHandler);
+      };
+      
+      setTimeout(() => {
+        document.addEventListener("click", closeHandler);
+      }, 50);
+    }
+
+    // Toast helper
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById("toastMessage");
+      toast.innerText = msg;
+      toast.style.background = isError ? "var(--accent-red)" : "var(--accent-green)";
+      toast.style.color = isError ? "#ffffff" : "#040805";
+      toast.classList.add("show");
+      
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 3000);
+    }
+
+    // Submit Bracket
+    async function submitBracket() {
+      const nameInput = document.getElementById("userNameInput");
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        showToast("Please enter a display name first", true);
+        nameInput.focus();
+        return;
+      }
+
+      // Check if bracket is complete: champion must be picked!
+      if (!picks.champion) {
+        showToast("Please complete the bracket before submitting!", true);
+        return;
+      }
+
+      // Save R32 slots into picks to reconstruct the bracket in view.html
+      picks.r32_slots = {};
+      for (let m in bracketState.r32) {
+        picks.r32_slots[m] = {
+          team1: bracketState.r32[m].team1,
+          team2: bracketState.r32[m].team2
+        };
+      }
+
+      const submitBtn = document.getElementById("submitBracketBtn");
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Submitting...";
+
+      try {
+        const res = await fetch(`${API_BASE}/bracket`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name, picks })
+        });
+
+        if (!res.ok) throw new Error("Failed to submit bracket");
+        const data = await res.json();
+        
+        // Redirect to view.html?id=BRACKET_ID
+        showToast("Bracket submitted successfully!");
+        setTimeout(() => {
+          window.location.href = `view.html?id=${data.id}`;
+        }, 1000);
+      } catch (err) {
+        console.error(err);
+        showToast("Submission failed. Try again.", true);
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit Bracket";
+      }
+    }
+
+    document.getElementById("submitBracketBtn").addEventListener("click", submitBracket);
+
+    // Initial Load
+    initStructures();
+    loadTeams();
+  </script>
+</body>
+</html>

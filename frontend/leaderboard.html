@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA World Cup 2026 - Leaderboard</title>
+  <meta name="description" content="View the global leaderboard of the 2026 FIFA World Cup bracket challenge. See who has the highest prediction score!">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <a href="index.html" class="logo-container">
+        <span class="logo-emoji">🏆</span>
+        <span class="logo-text">FIFA2026<span>Bracket</span></span>
+      </a>
+      <a href="bracket.html" class="btn btn-primary">🏆 Make Bracket</a>
+    </header>
+
+    <main style="flex-grow: 1; display: flex; flex-direction: column;">
+      <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.25rem;">Global Leaderboard</h1>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">Ranked by points. Correct picks in later rounds yield higher points.</p>
+      </div>
+
+      <!-- Leaderboard content area -->
+      <div class="leaderboard-wrapper" id="leaderboardWrapper" style="display:none;">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th class="rank-col">Rank</th>
+              <th class="name-col">Username</th>
+              <th class="score-col">Score</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody">
+            <!-- Table rows populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State / No Brackets Yet -->
+      <div id="emptyState" class="empty-state" style="display:none; margin: auto 0;">
+        <div class="empty-state-icon">📊</div>
+        <h2>No Brackets Submitted Yet</h2>
+        <p style="margin: 0.5rem 0 1.5rem 0;">Be the first to submit a bracket and claim the #1 spot!</p>
+        <a href="bracket.html" class="btn btn-primary">🏆 Create Bracket Now</a>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="empty-state" style="display:none; margin: auto 0;">
+        <div class="empty-state-icon">⚠️</div>
+        <h2>Connection Error</h2>
+        <p style="margin: 0.5rem 0 1.5rem 0;">Failed to fetch leaderboard rankings from the server.</p>
+        <button class="btn btn-secondary" onclick="loadLeaderboard()">Retry Loading</button>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingState" class="empty-state" style="margin: auto 0;">
+        <div style="font-size: 2.5rem; animation: spin 1.5s linear infinite;">⚽</div>
+        <h2 style="margin-top: 1rem;">Loading Standings...</h2>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </div>
+    </main>
+
+    <footer style="margin-top: auto; padding: 2rem 0; text-align: center; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border-color);">
+      <p>&copy; 2026 World Cup Bracket Predictor.</p>
+    </footer>
+  </div>
+
+  <!-- JS Logic -->
+  <script>
+    const API_BASE = "https://fifabracket-api.jason-greathouse.workers.dev";
+
+    async function loadLeaderboard() {
+      const loading = document.getElementById("loadingState");
+      const error = document.getElementById("errorState");
+      const empty = document.getElementById("emptyState");
+      const wrapper = document.getElementById("leaderboardWrapper");
+      const body = document.getElementById("leaderboardBody");
+
+      loading.style.display = "block";
+      error.style.display = "none";
+      empty.style.display = "none";
+      wrapper.style.display = "none";
+
+      try {
+        const res = await fetch(`${API_BASE}/leaderboard`);
+        if (!res.ok) throw new Error("Leaderboard API failed");
+        
+        const brackets = await res.json();
+        
+        if (brackets.length === 0) {
+          loading.style.display = "none";
+          empty.style.display = "block";
+          return;
+        }
+
+        // Sort by score descending (API might already sort them, but let's be sure)
+        brackets.sort((a, b) => b.score - a.score);
+
+        body.innerHTML = "";
+
+        // Compute rankings with tie handling
+        let prevScore = null;
+        let displayRank = 1;
+        
+        brackets.forEach((item, index) => {
+          if (prevScore !== null && item.score < prevScore) {
+            displayRank = index + 1;
+          }
+          prevScore = item.score;
+
+          // Rank styling class for top 3
+          let rankClass = "";
+          if (displayRank === 1) rankClass = "rank-1";
+          else if (displayRank === 2) rankClass = "rank-2";
+          else if (displayRank === 3) rankClass = "rank-3";
+
+          const row = document.createElement("tr");
+          row.className = "leaderboard-row";
+          // Redirect to view.html on click
+          row.onclick = () => {
+            window.location.href = `view.html?id=${item.id}`;
+          };
+
+          row.innerHTML = `
+            <td class="rank-col ${rankClass}">#${displayRank}</td>
+            <td class="name-col">${escapeHtml(item.name)}</td>
+            <td class="score-col">${item.score} pts</td>
+          `;
+
+          body.appendChild(row);
+        });
+
+        loading.style.display = "none";
+        wrapper.style.display = "block";
+
+      } catch (err) {
+        console.error(err);
+        loading.style.display = "none";
+        error.style.display = "block";
+      }
+    }
+
+    // Helper to prevent HTML injection
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Start
+    loadLeaderboard();
+  </script>
+</body>
+</html>

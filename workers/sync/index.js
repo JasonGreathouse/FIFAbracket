@@ -1,10 +1,10 @@
 const SCORING = {
-  r32: 1,
-  r16: 2,
-  qf: 4,
-  sf: 8,
-  final: 16,
-  champion: 32,
+  r32: 10,
+  r16: 20,
+  qf: 40,
+  sf: 80,
+  final: 160,
+  champion: 320,
 };
 
 const corsHeaders = {

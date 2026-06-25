@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA World Cup 2026 - Today's Matches</title>
+  <meta name="description" content="Live scores and today's 2026 FIFA World Cup match results.">
+  <link rel="stylesheet" href="index.css">
+  <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
+  <style>
+    .matchups-header {
+      margin-bottom: 2rem;
+    }
+    .matchups-header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+    }
+    .matchups-header p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1.25rem;
+      margin-bottom: 2rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    .refresh-bar strong {
+      color: var(--accent-green);
+    }
+    .refresh-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .refresh-btn:hover {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+    .matches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+    .match-card-today {
+      background: var(--glass-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.25rem;
+      backdrop-filter: var(--glass-blur);
+      transition: var(--transition-smooth);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .match-card-today:hover {
+      border-color: rgba(0,230,118,0.3);
+      box-shadow: var(--shadow-neon);
+    }
+    .match-card-today.status-live {
+      border-color: var(--accent-green);
+      box-shadow: var(--shadow-neon);
+      animation: pulse-border 2s ease-in-out infinite;
+    }
+    .match-card-today.status-finished {
+      border-color: rgba(255,255,255,0.15);
+      opacity: 0.85;
+    }
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 10px rgba(0,230,118,0.2); }
+      50% { box-shadow: 0 0 25px rgba(0,230,118,0.5); }
+    }
+    .match-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      align-self: flex-start;
+    }
+    .badge-live {
+      background: rgba(0,230,118,0.15);
+      color: var(--accent-green);
+      border: 1px solid var(--accent-green);
+    }
+    .badge-live::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: blink 1s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    .badge-finished {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+    .badge-timed {
+      background: rgba(255,215,0,0.1);
+      color: var(--accent-gold);
+      border: 1px solid rgba(255,215,0,0.3);
+    }
+    .badge-halftime {
+      background: rgba(255,165,0,0.15);
+      color: #FFA500;
+      border: 1px solid rgba(255,165,0,0.4);
+    }
+    .teams-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .team-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      flex: 1;
+      text-align: center;
+    }
+    .team-block .team-flag {
+      font-size: 2.5rem;
+      line-height: 1;
+    }
+    .team-block .team-flag img {
+      width: 2.5rem;
+      height: 1.7rem;
+      object-fit: cover;
+      border-radius: 3px;
+    }
+    .team-block .team-name-today {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .team-block.winner .team-name-today {
+      color: var(--accent-green);
+    }
+    .score-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      min-width: 80px;
+    }
+    .score-main {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .score-timed {
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      letter-spacing: 2px;
+    }
+    .score-halftime {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.05);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+    .match-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.75rem;
+    }
+    .kickoff-time {
+      font-weight: 500;
+    }
+    .no-matches {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text-secondary);
+    }
+    .no-matches-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    .last-updated {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <a href="index.html" class="logo-container">
+        <span class="logo-emoji">🏆</span>
+        <span class="logo-text">FIFA2026<span>Bracket</span></span>
+      </a>
+      <a href="leaderboard.html" class="btn btn-secondary">Leaderboard</a>
+    </header>
+
+    <main style="flex-grow:1;display:flex;flex-direction:column;">
+      <div class="matchups-header">
+        <h1>⚽ Today's Matches</h1>
+        <p id="dateDisplay">Loading today's fixtures...</p>
+      </div>
+
+      <div class="refresh-bar">
+        <span>Auto-refreshes every <strong>3 minutes</strong> during live matches</span>
+        <span class="last-updated" id="lastUpdated">Last updated: —</span>
+        <button class="refresh-btn" onclick="loadMatches()">⟳ Refresh Now</button>
+      </div>
+
+      <div id="loadingState" class="empty-state" style="margin:auto 0;">
+        <div style="font-size:2.5rem;animation:spin 1.5s linear infinite;">⚽</div>
+        <h2 style="margin-top:1rem;">Loading Today's Matches...</h2>
+        <style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
+      </div>
+
+      <div id="errorState" class="empty-state" style="display:none;margin:auto 0;">
+        <div class="empty-state-icon">⚠️</div>
+        <h2>Couldn't Load Matches</h2>
+        <p style="margin:0.5rem 0 1.5rem 0;">There was a problem connecting to the match data. Please try again.</p>
+        <button class="btn btn-secondary" onclick="loadMatches()">Retry</button>
+      </div>
+
+      <div id="noMatchesState" class="no-matches" style="display:none;">
+        <div class="no-matches-icon">📅</div>
+        <h2>No Matches Today</h2>
+        <p style="margin-top:0.5rem;">Check back on a match day — the World Cup runs June 11 through July 19!</p>
+        <a href="bracket.html" class="btn btn-primary" style="margin-top:1.5rem;">🏆 Make Your Bracket</a>
+      </div>
+
+      <div class="matches-grid" id="matchesGrid" style="display:none;"></div>
+    </main>
+
+    <footer style="margin-top:2rem;padding:2rem 0;text-align:center;font-size:0.85rem;color:var(--text-secondary);border-top:1px solid var(--border-color);">
+      <p>Match data provided by <a href="https://www.football-data.org" target="_blank" style="color:var(--accent-green);text-decoration:none;">football-data.org</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const API_BASE = "https://fifabracket-api.jason-greathouse.workers.dev";
+    let autoRefreshInterval = null;
+    let hasLiveMatches = false;
+
+    function getFlagEmoji(tla) {
+      if (!tla) return '🏳️';
+      const code = tla.toUpperCase();
+      if (code === 'ENG') return '<img src="images/england.png" style="width:2.5rem;height:1.7rem;object-fit:cover;border-radius:3px;" alt="England">';
+      if (code === 'SCO') return '🏴󠁧󠁢󠁳󠁣󠁴󠁿';
+      const isoMap = {
+        CZE:'CZ', KOR:'KR', MEX:'MX', RSA:'ZA', BIH:'BA', CAN:'CA', QAT:'QA', SUI:'CH',
+        BRA:'BR', HAI:'HT', MAR:'MA', AUS:'AU', PAR:'PY', TUR:'TR', USA:'US', CIV:'CI',
+        CUW:'CW', ECU:'EC', GER:'DE', JPN:'JP', NED:'NL', SWE:'SE', TUN:'TN', BEL:'BE',
+        EGY:'EG', IRN:'IR', NZL:'NZ', CPV:'CV', ESP:'ES', KSA:'SA', URU:'UY', FRA:'FR',
+        IRQ:'IQ', NOR:'NO', SEN:'SN', ALG:'DZ', ARG:'AR', AUT:'AT', JOR:'JO', COD:'CD',
+        COL:'CO', POR:'PT', UZB:'UZ', CRO:'HR', GHA:'GH', PAN:'PA'
+      };
+      const iso = isoMap[code];
+      if (!iso) return '🏳️';
+      return iso.split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
+    }
+
+    function formatKickoff(utcDate) {
+      const date = new Date(utcDate);
+      return date.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', timeZoneName:'short' });
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr + 'T12:00:00Z');
+      return date.toLocaleDateString([], { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    }
+
+    function getStatusBadge(status, minute) {
+      switch(status) {
+        case 'IN_PLAY':
+          return `<span class="match-status-badge badge-live">LIVE ${minute ? minute+"'" : ''}</span>`;
+        case 'HALF_TIME':
+          return `<span class="match-status-badge badge-halftime">⏸ Half Time</span>`;
+        case 'FINISHED':
+          return `<span class="match-status-badge badge-finished">Full Time</span>`;
+        case 'TIMED':
+        case 'SCHEDULED':
+          return `<span class="match-status-badge badge-timed">⏱ Upcoming</span>`;
+        case 'PAUSED':
+          return `<span class="match-status-badge badge-halftime">⏸ Paused</span>`;
+        default:
+          return `<span class="match-status-badge badge-timed">${status}</span>`;
+      }
+    }
+
+    function getScoreBlock(match) {
+      const { status, homeScore, awayScore, halfTimeHome, halfTimeAway } = match;
+      if (status === 'TIMED' || status === 'SCHEDULED') {
+        return `<div class="score-block"><span class="score-timed">vs</span></div>`;
+      }
+      const ht = (halfTimeHome !== null && halfTimeAway !== null)
+        ? `<span class="score-halftime">HT: ${halfTimeHome} - ${halfTimeAway}</span>`
+        : '';
+      return `
+        <div class="score-block">
+          <span class="score-main">${homeScore ?? 0} - ${awayScore ?? 0}</span>
+          ${ht}
+        </div>`;
+    }
+
+    function renderMatch(match) {
+      const isLive = match.status === 'IN_PLAY' || match.status === 'HALF_TIME' || match.status === 'PAUSED';
+      const isFinished = match.status === 'FINISHED';
+      const homeWon = match.winner === 'HOME_TEAM';
+      const awayWon = match.winner === 'AWAY_TEAM';
+
+      const cardClass = isLive ? 'match-card-today status-live'
+        : isFinished ? 'match-card-today status-finished'
+        : 'match-card-today';
+
+      return `
+        <div class="${cardClass}">
+          ${getStatusBadge(match.status, match.minute)}
+          <div class="teams-row">
+            <div class="team-block ${homeWon ? 'winner' : ''}">
+              <div class="team-flag">${getFlagEmoji(match.homeTla)}</div>
+              <div class="team-name-today">${match.homeTeam}</div>
+            </div>
+            ${getScoreBlock(match)}
+            <div class="team-block ${awayWon ? 'winner' : ''}">
+              <div class="team-flag">${getFlagEmoji(match.awayTla)}</div>
+              <div class="team-name-today">${match.awayTeam}</div>
+            </div>
+          </div>
+          <div class="match-footer">
+            <span class="kickoff-time">⏰ ${formatKickoff(match.utcDate)}</span>
+            ${match.venue ? `<span>📍 ${match.venue}</span>` : ''}
+          </div>
+        </div>`;
+    }
+
+    async function loadMatches() {
+      const loading = document.getElementById("loadingState");
+      const error = document.getElementById("errorState");
+      const noMatches = document.getElementById("noMatchesState");
+      const grid = document.getElementById("matchesGrid");
+
+      error.style.display = "none";
+      noMatches.style.display = "none";
+
+      try {
+        const res = await fetch(`${API_BASE}/today`);
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+
+        loading.style.display = "none";
+
+        document.getElementById("dateDisplay").innerText =
+          `Showing matches for ${formatDate(data.date)}`;
+
+        if (!data.matches || data.matches.length === 0) {
+          noMatches.style.display = "block";
+          grid.style.display = "none";
+          return;
+        }
+
+        // Sort: Live first, then upcoming by time, then finished
+        const order = { IN_PLAY:0, HALF_TIME:1, PAUSED:2, TIMED:3, SCHEDULED:4, FINISHED:5 };
+        data.matches.sort((a,b) => {
+          const statusDiff = (order[a.status]??9) - (order[b.status]??9);
+          if (statusDiff !== 0) return statusDiff;
+          return new Date(a.utcDate) - new Date(b.utcDate);
+        });
+
+        hasLiveMatches = data.matches.some(m =>
+          m.status === 'IN_PLAY' || m.status === 'HALF_TIME' || m.status === 'PAUSED'
+        );
+
+        grid.innerHTML = data.matches.map(renderMatch).join('');
+        grid.style.display = "grid";
+
+        // Update last updated time
+        document.getElementById("lastUpdated").innerText =
+          `Last updated: ${new Date().toLocaleTimeString()}`;
+
+        // Twemoji parse
+        twemoji.parse(grid);
+
+        // Auto-refresh every 3 min if live matches, every 10 min otherwise
+        clearInterval(autoRefreshInterval);
+        const interval = hasLiveMatches ? 3 * 60 * 1000 : 10 * 60 * 1000;
+        autoRefreshInterval = setInterval(loadMatches, interval);
+
+      } catch(err) {
+        console.error(err);
+        loading.style.display = "none";
+        error.style.display = "block";
+      }
+    }
+
+    // Start
+    loadMatches();
+  </script>
+</body>
+</html>

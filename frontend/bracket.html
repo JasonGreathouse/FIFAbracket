@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FIFA World Cup 2026 Bracket Builder</title>
-  <meta name="description" content="Build your 2026 FIFA World Cup knockout bracket. Select your 32 teams and predict the champion!">
+  <meta name="description" content="Build your 2026 FIFA World Cup knockout bracket. Pick winners and predict the champion!">
   <link rel="stylesheet" href="index.css">
+  <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -21,7 +22,7 @@
     <main class="bracket-wrapper">
       <div class="instructions-alert" id="instructionMessage">
         <span>💡</span>
-        <span>Start by manually selecting teams for the 32 slots in the Round of 32. Once both teams in a match are selected, click a team to pick the winner!</span>
+        <span>All Round of 32 matchups are set! Click a team to pick the winner — your pick cascades through the bracket automatically.</span>
       </div>
 
       <div class="bracket-meta">
@@ -45,29 +46,13 @@
             <div class="champion-title-text">Champion</div>
             <div class="champion-card empty" id="championCard">
               <div class="champion-badge">Winner</div>
-              <div class="empty-state-icon" style="font-size: 2rem; margin-bottom: 0px;">🏆</div>
+              <div class="empty-state-icon" style="font-size:2rem;margin-bottom:0px;">🏆</div>
               <span id="championName">TBD</span>
             </div>
           </div>
         </div>
       </div>
     </main>
-
-    <div class="selector-modal" id="teamSelectorModal">
-      <div class="selector-container">
-        <div class="selector-header">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
-            <h3>Select a Team</h3>
-            <button class="btn btn-danger" id="clearSlotBtn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Clear Slot</button>
-          </div>
-          <div class="search-wrapper">
-            <input type="text" class="search-input" id="teamSearchInput" placeholder="Search team by name or group...">
-            <button class="clear-search-btn" id="clearSearchBtn">&times;</button>
-          </div>
-        </div>
-        <div class="team-list-options" id="teamListOptions"></div>
-      </div>
-    </div>
 
     <div class="tooltip-container" id="teamTooltip"></div>
     <div class="toast" id="toastMessage">Bracket Saved!</div>
@@ -76,13 +61,12 @@
   <script>
     const API_BASE = "https://fifabracket-api.jason-greathouse.workers.dev";
 
-    // Generate flag emoji from team ID
+    // Twemoji flag rendering
     function getFlagEmoji(teamId) {
       if (!teamId) return '🏳️';
       const code = teamId.toUpperCase();
       if (code === 'SCO') return '🏴󠁧󠁢󠁳󠁣󠁴󠁿';
       if (code === 'ENG') return '🏴󠁧󠁢󠁦󠁬󠁧󠁿';
-      // Map 3-letter team IDs to 2-letter ISO codes
       const isoMap = {
         CZE:'CZ', KOR:'KR', MEX:'MX', RSA:'ZA', BIH:'BA', CAN:'CA', QAT:'QA', SUI:'CH',
         BRA:'BR', HAI:'HT', MAR:'MA', AUS:'AU', PAR:'PY', TUR:'TR', USA:'US', CIV:'CI',
@@ -95,6 +79,26 @@
       if (!iso) return '🏳️';
       return iso.split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
     }
+
+    // Hardcoded R32 matchups — confirmed + TBD
+    const R32_MATCHES = [
+      { id:'m1',  team1:'RSA', team2:'CAN' },
+      { id:'m2',  team1:'BRA', team2:'JPN' },
+      { id:'m3',  team1:'GER', team2:'PAR' },
+      { id:'m4',  team1:'NED', team2:'MAR' },
+      { id:'m5',  team1:'FRA', team2:'SWE' },
+      { id:'m6',  team1:'MEX', team2:'SCO' },
+      { id:'m7',  team1:'ENG', team2:'CPV' },
+      { id:'m8',  team1:'USA', team2:'BIH' },
+      { id:'m9',  team1:'TBD', team2:'TBD' },
+      { id:'m10', team1:'TBD', team2:'TBD' },
+      { id:'m11', team1:'TBD', team2:'TBD' },
+      { id:'m12', team1:'TBD', team2:'TBD' },
+      { id:'m13', team1:'TBD', team2:'TBD' },
+      { id:'m14', team1:'TBD', team2:'TBD' },
+      { id:'m15', team1:'TBD', team2:'TBD' },
+      { id:'m16', team1:'TBD', team2:'TBD' },
+    ];
 
     const TEAM_INFO = {
       CZE:{rank:35,odds:"+15000"}, KOR:{rank:22,odds:"+8000"}, MEX:{rank:15,odds:"+5000"},
@@ -118,13 +122,12 @@
     let allTeams = [];
     const bracketState = { r32:{}, r16:{}, qf:{}, sf:{}, final:{} };
     const picks = { r32:{}, r16:{}, qf:{}, sf:{}, final:{}, champion:null };
-    let activeSelectorSlot = null;
 
     function initStructures() {
-      for (let i = 1; i <= 16; i++) { bracketState.r32["match"+i]={team1:null,team2:null}; picks.r32["match"+i]=null; }
-      for (let i = 1; i <= 8; i++) { bracketState.r16["match"+i]={team1:null,team2:null}; picks.r16["match"+i]=null; }
-      for (let i = 1; i <= 4; i++) { bracketState.qf["match"+i]={team1:null,team2:null}; picks.qf["match"+i]=null; }
-      for (let i = 1; i <= 2; i++) { bracketState.sf["match"+i]={team1:null,team2:null}; picks.sf["match"+i]=null; }
+      for (let i=1;i<=16;i++) { bracketState.r32["match"+i]={team1:null,team2:null}; picks.r32["match"+i]=null; }
+      for (let i=1;i<=8;i++) { bracketState.r16["match"+i]={team1:null,team2:null}; picks.r16["match"+i]=null; }
+      for (let i=1;i<=4;i++) { bracketState.qf["match"+i]={team1:null,team2:null}; picks.qf["match"+i]=null; }
+      for (let i=1;i<=2;i++) { bracketState.sf["match"+i]={team1:null,team2:null}; picks.sf["match"+i]=null; }
       bracketState.final.match1={team1:null,team2:null};
       picks.final.match1=null;
       picks.champion=null;
@@ -135,8 +138,19 @@
         const res = await fetch(`${API_BASE}/teams`);
         if (!res.ok) throw new Error("Failed to fetch teams");
         allTeams = await res.json();
-        allTeams.sort((a,b) => a.name.localeCompare(b.name));
+
+        // Pre-load R32 matchups from hardcoded list
+        R32_MATCHES.forEach((match, idx) => {
+          const matchNum = idx + 1;
+          bracketState.r32["match"+matchNum] = {
+            team1: match.team1 === 'TBD' ? null : match.team1,
+            team2: match.team2 === 'TBD' ? null : match.team2,
+            isTBD: match.team1 === 'TBD' || match.team2 === 'TBD'
+          };
+        });
+
         renderBracket();
+        twemoji.parse(document.body);
       } catch(err) {
         console.error(err);
         showToast("Error loading teams. Please refresh.", true);
@@ -159,11 +173,14 @@
         document.getElementById("championName").innerText="TBD";
         return;
       }
-      if (childRound) { bracketState[childRound]["match"+childMatchNum][childSlot]=null; clearWinnerAndCascade(childRound,childMatchNum); }
+      if (childRound) {
+        bracketState[childRound]["match"+childMatchNum][childSlot]=null;
+        clearWinnerAndCascade(childRound, childMatchNum);
+      }
     }
 
     function setMatchWinner(round, matchNum, teamId) {
-      picks[round]["match"+matchNum]=teamId;
+      picks[round]["match"+matchNum] = teamId;
       let childRound=null, childMatchNum=null, childSlot=null;
       if (round==='r32') { childRound='r16'; childMatchNum=Math.floor((matchNum-1)/2)+1; childSlot=(matchNum%2!==0)?'team1':'team2'; }
       else if (round==='r16') { childRound='qf'; childMatchNum=Math.floor((matchNum-1)/2)+1; childSlot=(matchNum%2!==0)?'team1':'team2'; }
@@ -176,15 +193,17 @@
         if (t) {
           cc.classList.remove("empty");
           document.getElementById("championName").innerHTML=`<span class="team-flag">${getFlagEmoji(t.id)}</span> <span class="team-name">${t.name}</span>`;
+          twemoji.parse(cc);
         }
         updateProgress(); renderBracket(); return;
       }
       if (childRound) {
         const old=bracketState[childRound]["match"+childMatchNum][childSlot];
         bracketState[childRound]["match"+childMatchNum][childSlot]=teamId;
-        if (old!==teamId) clearWinnerAndCascade(childRound,childMatchNum);
+        if (old!==teamId) clearWinnerAndCascade(childRound, childMatchNum);
       }
       updateProgress(); renderBracket();
+      twemoji.parse(document.body);
     }
 
     function updateProgress() {
@@ -198,170 +217,95 @@
       document.getElementById("bracketProgressText").innerText=`${count}/32 picks completed`;
     }
 
-    function openSelector(round, matchNum, slot) {
-      activeSelectorSlot={round,matchNum,slot};
-      const modal=document.getElementById("teamSelectorModal");
-      const searchInput=document.getElementById("teamSearchInput");
-      searchInput.value="";
-      populateSelectorOptions();
-      modal.classList.add("active");
-      searchInput.focus();
-    }
-
-    function closeSelector() {
-      document.getElementById("teamSelectorModal").classList.remove("active");
-      activeSelectorSlot=null;
-    }
-
-    function getSelectedR32Teams() {
-      const selected=[];
-      for (let m in bracketState.r32) {
-        const match=bracketState.r32[m];
-        if (match.team1&&!(activeSelectorSlot.round==='r32'&&activeSelectorSlot.matchNum==m.replace('match','')&&activeSelectorSlot.slot==='team1')) selected.push(match.team1);
-        if (match.team2&&!(activeSelectorSlot.round==='r32'&&activeSelectorSlot.matchNum==m.replace('match','')&&activeSelectorSlot.slot==='team2')) selected.push(match.team2);
-      }
-      return selected;
-    }
-
-    function populateSelectorOptions(query="") {
-      const container=document.getElementById("teamListOptions");
-      container.innerHTML="";
-      const selectedTeams=getSelectedR32Teams();
-      const filtered=allTeams.filter(t=>
-        t.name.toLowerCase().includes(query.toLowerCase())||
-        t.id.toLowerCase().includes(query.toLowerCase())||
-        `group ${t.group_letter}`.toLowerCase().includes(query.toLowerCase())
-      );
-      if (filtered.length===0) {
-        container.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--text-secondary);">No teams found</div>';
-        return;
-      }
-      filtered.forEach(team => {
-        const isAlreadySelected=selectedTeams.includes(team.id);
-        const currentSlotTeam=bracketState[activeSelectorSlot.round]["match"+activeSelectorSlot.matchNum][activeSelectorSlot.slot];
-        const isCurrentSelection=currentSlotTeam===team.id;
-        const option=document.createElement("div");
-        option.className=`team-option ${isAlreadySelected?'disabled':''} ${isCurrentSelection?'selected':''}`;
-        const info=TEAM_INFO[team.id]||{rank:"N/A",odds:"N/A"};
-        option.innerHTML=`
-          <div class="team-display">
-            <span class="team-flag">${getFlagEmoji(team.id)}</span>
-            <span class="team-name">${team.name} <span style="font-size:0.75rem;color:var(--text-secondary)">(${team.id})</span></span>
-          </div>
-          <div style="display:flex;gap:0.5rem;align-items:center;">
-            <span style="font-size:0.8rem;color:var(--text-secondary)">Grp ${team.group_letter}</span>
-            <span class="team-option-meta">Rank #${info.rank}</span>
-          </div>`;
-        if (!isAlreadySelected) option.addEventListener("click",()=>{ selectTeamForActiveSlot(team.id); });
-        container.appendChild(option);
-      });
-    }
-
-    function selectTeamForActiveSlot(teamId) {
-      const {round,matchNum,slot}=activeSelectorSlot;
-      bracketState[round]["match"+matchNum][slot]=teamId;
-      clearWinnerAndCascade(round,matchNum);
-      closeSelector(); updateProgress(); renderBracket();
-    }
-
-    function clearActiveSlot() {
-      if (!activeSelectorSlot) return;
-      const {round,matchNum,slot}=activeSelectorSlot;
-      bracketState[round]["match"+matchNum][slot]=null;
-      clearWinnerAndCascade(round,matchNum);
-      closeSelector(); updateProgress(); renderBracket();
-    }
-
-    document.getElementById("teamSearchInput").addEventListener("input",(e)=>{ populateSelectorOptions(e.target.value); });
-    document.getElementById("clearSearchBtn").addEventListener("click",()=>{ const i=document.getElementById("teamSearchInput"); i.value=""; populateSelectorOptions(""); i.focus(); });
-    document.getElementById("clearSlotBtn").addEventListener("click",clearActiveSlot);
-    document.getElementById("teamSelectorModal").addEventListener("click",(e)=>{ if(e.target.id==="teamSelectorModal") closeSelector(); });
-
-    function renderSlotHtml(round, matchNum, slot, teamId, isWinnerSelected) {
+    function renderSlotHtml(round, matchNum, slot, teamId, isWinnerSelected, isTBD) {
       if (!teamId) {
-        if (round==='r32') return `<div class="match-slot empty" onclick="openSelector('${round}',${matchNum},'${slot}')"><span>+ Select Team</span></div>`;
-        return `<div class="match-slot empty"><span>TBD</span></div>`;
+        return `<div class="match-slot empty">
+          <span>${isTBD ? '⏳ TBD' : 'TBD'}</span>
+        </div>`;
       }
-      const team=getTeam(teamId);
+      const team = getTeam(teamId);
       if (!team) return "";
-      const winnerClass=isWinnerSelected?"selected-winner":"";
-      const hasBothTeams=bracketState[round]["match"+matchNum].team1&&bracketState[round]["match"+matchNum].team2;
-      let clickHandler="";
-      if (hasBothTeams) clickHandler=`onclick="selectWinnerClick('${round}',${matchNum},'${teamId}')"`;
-      else if (round==='r32') clickHandler=`onclick="openSelector('${round}',${matchNum},'${slot}')"`;
-      const editBtnHtml=(round==='r32')?`<button class="slot-info-btn" onclick="event.stopPropagation();openSelector('${round}',${matchNum},'${slot}')" title="Change Team">⚙️</button>`:"";
-      const infoBtnHtml=`<button class="slot-info-btn" onclick="event.stopPropagation();showTeamTooltip(event,'${teamId}')" title="View Team Stats">ℹ️</button>`;
+      const winnerClass = isWinnerSelected ? "selected-winner" : "";
+      const hasBothTeams = bracketState[round]["match"+matchNum].team1 && bracketState[round]["match"+matchNum].team2;
+      let clickHandler = "";
+      if (hasBothTeams) clickHandler = `onclick="selectWinnerClick('${round}',${matchNum},'${teamId}')"`;
+      const infoBtnHtml = `<button class="slot-info-btn" onclick="event.stopPropagation();showTeamTooltip(event,'${teamId}')" title="View Team Stats">ℹ️</button>`;
       return `
-        <div class="match-slot ${winnerClass}" ${clickHandler}>
+        <div class="match-slot ${winnerClass}" ${clickHandler} style="${hasBothTeams?'cursor:pointer':''}">
           <div class="team-display">
             <span class="team-flag">${getFlagEmoji(team.id)}</span>
             <span class="team-name">${team.name}</span>
           </div>
-          <div style="display:flex;gap:0.25rem;align-items:center;">${editBtnHtml}${infoBtnHtml}</div>
+          <div style="display:flex;gap:0.25rem;align-items:center;">${infoBtnHtml}</div>
         </div>`;
     }
 
-    function selectWinnerClick(round, matchNum, teamId) { setMatchWinner(round,matchNum,teamId); }
+    function selectWinnerClick(round, matchNum, teamId) { setMatchWinner(round, matchNum, teamId); }
 
     function renderRound(roundName, matchCount) {
-      const container=document.getElementById(`round-${roundName}`);
-      container.innerHTML="";
+      const container = document.getElementById(`round-${roundName}`);
+      container.innerHTML = "";
       for (let i=1;i<=matchCount;i++) {
-        const match=bracketState[roundName]["match"+i];
-        const winner=picks[roundName]["match"+i];
-        const card=document.createElement("div");
-        card.className="match-card";
-        const hasBothTeams=match.team1&&match.team2;
-        const subTitle=hasBothTeams?"Pick Winner":(roundName==='r32'?"Select Teams":"Waiting for prev rounds");
-        card.innerHTML=`
+        const match = bracketState[roundName]["match"+i];
+        const winner = picks[roundName]["match"+i];
+        const card = document.createElement("div");
+        card.className = "match-card";
+        const hasBothTeams = match.team1 && match.team2;
+        const isTBD = match.isTBD || (!match.team1 && !match.team2 && roundName === 'r32');
+        let subTitle = "";
+        if (roundName === 'r32') subTitle = hasBothTeams ? "Pick Winner" : "⏳ Coming Soon";
+        else subTitle = hasBothTeams ? "Pick Winner" : "Awaiting picks";
+        card.innerHTML = `
           <div class="match-header">
             <span>Match ${i}</span>
             <span style="color:${hasBothTeams?'var(--accent-green)':'var(--text-secondary)'}">${subTitle}</span>
           </div>
-          ${renderSlotHtml(roundName,i,"team1",match.team1,winner&&winner===match.team1)}
-          ${renderSlotHtml(roundName,i,"team2",match.team2,winner&&winner===match.team2)}`;
+          ${renderSlotHtml(roundName,i,"team1",match.team1,winner&&winner===match.team1,isTBD)}
+          ${renderSlotHtml(roundName,i,"team2",match.team2,winner&&winner===match.team2,isTBD)}`;
         container.appendChild(card);
       }
     }
 
     function renderBracket() {
       renderRound("r32",16); renderRound("r16",8); renderRound("qf",4); renderRound("sf",2); renderRound("final",1);
-      const cc=document.getElementById("championCard");
+      const cc = document.getElementById("championCard");
       if (picks.champion) {
-        const team=getTeam(picks.champion);
+        const team = getTeam(picks.champion);
         if (team) {
           cc.classList.remove("empty");
           document.getElementById("championName").innerHTML=`
             <span class="team-flag" style="font-size:2rem;display:block;margin-bottom:0.25rem;">${getFlagEmoji(team.id)}</span>
             <span class="team-name" style="font-weight:800;font-size:1.1rem;">${team.name}</span>`;
-          cc.onclick=()=>showTeamTooltip(event,team.id);
+          cc.onclick = () => showTeamTooltip(event, team.id);
+          twemoji.parse(cc);
         }
       } else {
         cc.classList.add("empty");
         document.getElementById("championName").innerText="TBD";
-        cc.onclick=null;
+        cc.onclick = null;
       }
     }
 
     function showTeamTooltip(e, teamId) {
-      const tooltip=document.getElementById("teamTooltip");
-      const team=getTeam(teamId);
+      const tooltip = document.getElementById("teamTooltip");
+      const team = getTeam(teamId);
       if (!team) return;
-      const info=TEAM_INFO[teamId]||{rank:"N/A",odds:"N/A"};
+      const info = TEAM_INFO[teamId]||{rank:"N/A",odds:"N/A"};
       tooltip.innerHTML=`
         <div class="tooltip-title"><span>${getFlagEmoji(team.id)}</span><span>${team.name}</span></div>
         <div class="tooltip-row"><span>FIFA Rank:</span><strong>#${info.rank}</strong></div>
         <div class="tooltip-row"><span>Odds:</span><strong>${info.odds}</strong></div>
         <div class="tooltip-row"><span>Group:</span><strong>Group ${team.group_letter}</strong></div>`;
-      const rect=e.currentTarget.getBoundingClientRect();
+      twemoji.parse(tooltip);
+      const rect = e.currentTarget.getBoundingClientRect();
       tooltip.style.left=`${Math.min(window.innerWidth-240,Math.max(10,rect.left+window.scrollX-100))}px`;
       tooltip.style.top=`${rect.top+window.scrollY-100}px`;
       tooltip.classList.add("active");
       setTimeout(()=>{ document.addEventListener("click",()=>tooltip.classList.remove("active"),{once:true}); },50);
     }
 
-    function showToast(msg,isError=false) {
-      const toast=document.getElementById("toastMessage");
+    function showToast(msg, isError=false) {
+      const toast = document.getElementById("toastMessage");
       toast.innerText=msg;
       toast.style.background=isError?"var(--accent-red)":"var(--accent-green)";
       toast.style.color=isError?"#ffffff":"#040805";
@@ -370,26 +314,32 @@
     }
 
     async function submitBracket() {
-      const nameInput=document.getElementById("userNameInput");
-      const name=nameInput.value.trim();
+      const nameInput = document.getElementById("userNameInput");
+      const name = nameInput.value.trim();
       if (!name) { showToast("Please enter a display name first",true); nameInput.focus(); return; }
-      if (!picks.champion) { showToast("Please complete the bracket before submitting!",true); return; }
-      picks.r32_slots={};
-      for (let m in bracketState.r32) picks.r32_slots[m]={team1:bracketState.r32[m].team1,team2:bracketState.r32[m].team2};
-      const submitBtn=document.getElementById("submitBracketBtn");
+      if (!picks.champion) { showToast("Please complete your bracket before submitting!",true); return; }
+
+      // Store R32 slots for reconstruction in view.html
+      picks.r32_slots = {};
+      for (let m in bracketState.r32) {
+        picks.r32_slots[m] = { team1:bracketState.r32[m].team1, team2:bracketState.r32[m].team2 };
+      }
+
+      const submitBtn = document.getElementById("submitBracketBtn");
       submitBtn.disabled=true; submitBtn.innerText="Submitting...";
+
       try {
-        const res=await fetch(`${API_BASE}/bracket`,{
+        const res = await fetch(`${API_BASE}/bracket`, {
           method:"POST",
           headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({name,picks})
+          body:JSON.stringify({name, picks})
         });
         if (!res.ok) {
-          const err=await res.json();
+          const err = await res.json();
           throw new Error(err.error||"Failed to submit");
         }
-        const data=await res.json();
-        showToast("Bracket submitted successfully!");
+        const data = await res.json();
+        showToast("Bracket submitted! Redirecting...");
         setTimeout(()=>{ window.location.href=`view.html?id=${data.id}`; },1000);
       } catch(err) {
         console.error(err);
@@ -398,7 +348,7 @@
       }
     }
 
-    document.getElementById("submitBracketBtn").addEventListener("click",submitBracket);
+    document.getElementById("submitBracketBtn").addEventListener("click", submitBracket);
     initStructures();
     loadTeams();
   </script>

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FIFA World Cup 2026 Bracket Challenge</title>
-  <meta name="description" content="Predict the 2026 FIFA World Cup knockout stage. Build your bracket, select your teams, and climb the leaderboard!">
+  <meta name="description" content="Predict the 2026 FIFA World Cup knockout stage. Pick your winners, share your bracket, and compete with friends on the leaderboard!">
   <link rel="stylesheet" href="index.css">
-  <!-- HTML5 Semantic & SEO Tags -->
+  <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -20,18 +20,17 @@
     </header>
 
     <main class="hero-section">
-      <div class="hero-badge">⚽ Knockout Stage Prediction</div>
-      <h1 class="hero-title">Predict the Champion of <span>World Cup 2026</span></h1>
+      <div class="hero-badge">⚽ Round of 32 is SET — Make Your Picks!</div>
+      <h1 class="hero-title">Who Will Win <span>World Cup 2026?</span></h1>
       <p class="hero-subtitle">
-        The ultimate prediction challenge. Manually select your 32-team Round of 32 matches, make your path, and showcase your soccer wisdom.
+        The Round of 32 matchups are locked in. Pick your winners round by round, share your bracket with friends, and see who predicted it best on the leaderboard!
       </p>
 
       <div class="hero-ctas">
-        <a href="bracket.html" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">🏆 Make Your Bracket</a>
-        <a href="leaderboard.html" class="btn btn-secondary" style="font-size: 1.1rem; padding: 1rem 2rem;">📊 View Leaderboard</a>
+        <a href="bracket.html" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2rem;">🏆 Make Your Bracket</a>
+        <a href="leaderboard.html" class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 2rem;">📊 View Leaderboard</a>
       </div>
 
-      <!-- Feature highlights section -->
       <style>
         .features-grid {
           display: flex;
@@ -54,42 +53,35 @@
           border-color: var(--accent-green);
           transform: translateY(-4px);
         }
-        .feature-icon {
-          font-size: 2rem;
-          margin-bottom: 0.75rem;
-        }
-        .feature-card h3 {
-          margin-bottom: 0.5rem;
-          font-weight: 700;
-        }
-        .feature-card p {
-          color: var(--text-secondary);
-          font-size: 0.9rem;
-        }
+        .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .feature-card h3 { margin-bottom: 0.5rem; font-weight: 700; }
+        .feature-card p { color: var(--text-secondary); font-size: 0.9rem; }
       </style>
+
       <div class="features-grid">
         <div class="feature-card">
-          <div class="feature-icon">✨</div>
-          <h3>Custom Seeding</h3>
-          <p>Hand-select your 32 qualified teams. Create the exact Round of 32 matchups you believe will happen.</p>
+          <div class="feature-icon">🎯</div>
+          <h3>Pick Your Winners</h3>
+          <p>All 16 Round of 32 matchups are set. Click to advance teams round by round all the way to your predicted champion.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3>Dynamic Flow</h3>
-          <p>Cascade picks from Round of 32 to the Finals with instant updates and full support for downstream resets.</p>
+          <div class="feature-icon">🔗</div>
+          <h3>Share Your Bracket</h3>
+          <p>Every bracket gets a unique link. Share it with friends, download it as an HTML file, or just brag about your picks.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">📈</div>
-          <h3>Real-time Score</h3>
-          <p>Compare your predictions with official match results and climb to the top of the leaderboard.</p>
+          <div class="feature-icon">📊</div>
+          <h3>Compare & Compete</h3>
+          <p>The leaderboard ranks everyone by score as results come in. See how your predictions stack up against everyone else in real time.</p>
         </div>
       </div>
     </main>
 
-    <footer style="margin-top: auto; padding: 2rem 0; text-align: center; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border-color);">
-      <p>&copy; 2026 World Cup Bracket Predictor. All national flags and soccer assets are used for entertainment purposes.</p>
+    <footer style="margin-top:auto;padding:2rem 0;text-align:center;font-size:0.85rem;color:var(--text-secondary);border-top:1px solid var(--border-color);">
+      <p>&copy; 2026 FIFA World Cup Bracket Challenge. Built for fans, by fans.</p>
     </footer>
   </div>
 
+  <script>twemoji.parse(document.body);</script>
 </body>
 </html>

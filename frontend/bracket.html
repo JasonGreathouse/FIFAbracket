@@ -108,24 +108,38 @@
     // Official FIFA 2026 knockout bracket — group-slot placeholders.
     // These are displayed before football-data.org publishes the official Round of 32 fixtures.
     // Once real fixtures exist in the /results API, the actual team names replace these labels.
+    //
+    // ORDER matches so consecutive pairs feed the SAME Round of 16 match:
+    //   Slots 1&2  → R16 match 1  (M74 GER + M77 FRA  → M89 Philadelphia)
+    //   Slots 3&4  → R16 match 2  (M73 RSA + M75 NED  → M90 Houston)
+    //   Slots 5&6  → R16 match 3  (M83 2K  + M84 1H   → M93 Dallas)
+    //   Slots 7&8  → R16 match 4  (M81 USA + M82 1G   → M94 Seattle)
+    //   Slots 9&10 → R16 match 5  (M76 BRA + M78 CIV  → M91 NY/NJ)
+    //   Slots 11&12→ R16 match 6  (M79 MEX + M80 1L   → M92 Mexico City)
+    //   Slots 13&14→ R16 match 7  (M86 ARG + M88 AUS  → M95 Atlanta)
+    //   Slots 15&16→ R16 match 8  (M85 SUI + M87 1K   → M96 Vancouver)
     const R32_STRUCTURE = [
-      { slot1: '1E',  slot2: '3/ABCDF' },  // Match 1
-      { slot1: '1I',  slot2: '3/CDFGH' },  // Match 2
-      { slot1: '2A',  slot2: '2B'      },  // Match 3
-      { slot1: '1F',  slot2: '2C'      },  // Match 4
-      { slot1: '2K',  slot2: '2L'      },  // Match 5
-      { slot1: '1H',  slot2: '2J'      },  // Match 6
-      { slot1: '1D',  slot2: '3/BEFIJ' },  // Match 7
-      { slot1: '1G',  slot2: '3/AEHIJ' },  // Match 8
-      { slot1: '1C',  slot2: '2F'      },  // Match 9
-      { slot1: '2E',  slot2: '2I'      },  // Match 10
-      { slot1: '1A',  slot2: '3/CEFHI' },  // Match 11
-      { slot1: '1L',  slot2: '3/EHIJK' },  // Match 12
-      { slot1: '1J',  slot2: '2H'      },  // Match 13
-      { slot1: '2D',  slot2: '2G'      },  // Match 14
-      { slot1: '1B',  slot2: '3/EFGIJ' },  // Match 15
-      { slot1: '1K',  slot2: '3/DEIJL' },  // Match 16
+      { slot1: 'GER',     slot2: '3/ABCDF', fifaMatchNum: 74 },  // Match 1  → R16-1
+      { slot1: 'FRA',     slot2: '3/CDFGH', fifaMatchNum: 77 },  // Match 2  → R16-1
+      { slot1: 'RSA',     slot2: 'CAN',     fifaMatchNum: 73 },  // Match 3  → R16-2
+      { slot1: 'NED',     slot2: 'MAR',     fifaMatchNum: 75 },  // Match 4  → R16-2
+      { slot1: '2K',      slot2: '2L',      fifaMatchNum: 83 },  // Match 5  → R16-3
+      { slot1: '1H',      slot2: '2J',      fifaMatchNum: 84 },  // Match 6  → R16-3
+      { slot1: 'USA',     slot2: 'BIH',     fifaMatchNum: 81 },  // Match 7  → R16-4
+      { slot1: '1G',      slot2: '3/AEHIJ', fifaMatchNum: 82 },  // Match 8  → R16-4
+      { slot1: 'BRA',     slot2: 'JPN',     fifaMatchNum: 76 },  // Match 9  → R16-5
+      { slot1: 'CIV',     slot2: 'NOR',     fifaMatchNum: 78 },  // Match 10 → R16-5
+      { slot1: 'MEX',     slot2: '3/CEFHI', fifaMatchNum: 79 },  // Match 11 → R16-6
+      { slot1: '1L',      slot2: '3/EHIJK', fifaMatchNum: 80 },  // Match 12 → R16-6
+      { slot1: 'ARG',     slot2: '2H',      fifaMatchNum: 86 },  // Match 13 → R16-7
+      { slot1: 'AUS',     slot2: '2G',      fifaMatchNum: 88 },  // Match 14 → R16-7
+      { slot1: 'SUI',     slot2: '3/EFGIJ', fifaMatchNum: 85 },  // Match 15 → R16-8
+      { slot1: '1K',      slot2: '3/DEIJL', fifaMatchNum: 87 },  // Match 16 → R16-8
     ];
+
+    // FIFA official match numbers in bracket order (for sorting API results).
+    // Index = bracket slot (0-based), value = FIFA match number.
+    const R32_FIFA_ORDER = [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87];
 
     const TEAM_INFO = {
       CZE:{rank:35,odds:"+15000"}, KOR:{rank:22,odds:"+8000"}, MEX:{rank:15,odds:"+5000"},

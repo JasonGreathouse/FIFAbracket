@@ -81,7 +81,10 @@
       return iso.split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
     }
 
-    // Hardcoded R32 matchups — confirmed + TBD
+    /*
+     * DEV REFERENCE — original hardcoded R32_MATCHES array.
+     * No longer used for rendering. Kept as a fallback reference only.
+     *
     const R32_MATCHES = [
       { id:'m1',  team1:'RSA', team2:'CAN' },
       { id:'m2',  team1:'BRA', team2:'JPN' },
@@ -99,6 +102,29 @@
       { id:'m14', team1:'TBD', team2:'TBD' },
       { id:'m15', team1:'TBD', team2:'TBD' },
       { id:'m16', team1:'TBD', team2:'TBD' },
+    ];
+     */
+
+    // Official FIFA 2026 knockout bracket — group-slot placeholders.
+    // These are displayed before football-data.org publishes the official Round of 32 fixtures.
+    // Once real fixtures exist in the /results API, the actual team names replace these labels.
+    const R32_STRUCTURE = [
+      { slot1: '1E',  slot2: '3/ABCDF' },  // Match 1
+      { slot1: '1I',  slot2: '3/CDFGH' },  // Match 2
+      { slot1: '2A',  slot2: '2B'      },  // Match 3
+      { slot1: '1F',  slot2: '2C'      },  // Match 4
+      { slot1: '2K',  slot2: '2L'      },  // Match 5
+      { slot1: '1H',  slot2: '2J'      },  // Match 6
+      { slot1: '1D',  slot2: '3/BEFIJ' },  // Match 7
+      { slot1: '1G',  slot2: '3/AEHIJ' },  // Match 8
+      { slot1: '1C',  slot2: '2F'      },  // Match 9
+      { slot1: '2E',  slot2: '2I'      },  // Match 10
+      { slot1: '1A',  slot2: '3/CEFHI' },  // Match 11
+      { slot1: '1L',  slot2: '3/EHIJK' },  // Match 12
+      { slot1: '1J',  slot2: '2H'      },  // Match 13
+      { slot1: '2D',  slot2: '2G'      },  // Match 14
+      { slot1: '1B',  slot2: '3/EFGIJ' },  // Match 15
+      { slot1: '1K',  slot2: '3/DEIJL' },  // Match 16
     ];
 
     const TEAM_INFO = {
@@ -136,25 +162,73 @@
 
     async function loadTeams() {
       try {
-        const res = await fetch(`${API_BASE}/teams`);
-        if (!res.ok) throw new Error("Failed to fetch teams");
-        allTeams = await res.json();
+        // Fetch teams and current match results concurrently
+        const [teamsRes, resultsRes] = await Promise.all([
+          fetch(`${API_BASE}/teams`),
+          fetch(`${API_BASE}/results`)
+        ]);
 
-        // Pre-load R32 matchups from hardcoded list
-        R32_MATCHES.forEach((match, idx) => {
-          const matchNum = idx + 1;
-          bracketState.r32["match"+matchNum] = {
-            team1: match.team1 === 'TBD' ? null : match.team1,
-            team2: match.team2 === 'TBD' ? null : match.team2,
-            isTBD: match.team1 === 'TBD' || match.team2 === 'TBD'
-          };
-        });
+        if (!teamsRes.ok) throw new Error('Failed to fetch teams');
+        allTeams = await teamsRes.json();
+
+        // Attempt to read official Round of 32 fixtures from the API
+        let r32ApiMatches = [];
+        if (resultsRes.ok) {
+          try {
+            const allResults = await resultsRes.json();
+            // The sync worker stores round-of-32 rows with round = 'r32'
+            // team1_id and team2_id are TLA codes (e.g. 'BRA'), id is football-data.org's match id
+            r32ApiMatches = Array.isArray(allResults)
+              ? allResults.filter(m => m.round === 'r32' && m.team1_id && m.team2_id)
+              : [];
+          } catch(e) {
+            console.warn('Could not parse results:', e);
+          }
+        }
+
+        if (r32ApiMatches.length > 0) {
+          // ── API PATH ─────────────────────────────────────────────────────────
+          // Official fixtures exist — populate bracket from football-data.org data.
+          // Sort by the order they appear in the official bracket (match_date ascending).
+          r32ApiMatches.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+
+          r32ApiMatches.forEach((match, idx) => {
+            const matchNum = idx + 1;
+            bracketState.r32['match' + matchNum] = {
+              team1: match.team1_id,
+              team2: match.team2_id,
+              apiMatchId: String(match.id),
+              isPlaceholder: false
+            };
+          });
+
+          // Fill any remaining slots (shouldn't happen once all 16 are published)
+          for (let i = r32ApiMatches.length + 1; i <= 16; i++) {
+            const ph = R32_STRUCTURE[i - 1];
+            bracketState.r32['match' + i] = {
+              team1: null, team2: null,
+              slot1: ph.slot1, slot2: ph.slot2,
+              isPlaceholder: true
+            };
+          }
+        } else {
+          // ── PLACEHOLDER PATH ─────────────────────────────────────────────────
+          // No official fixtures yet — show FIFA bracket slot labels.
+          R32_STRUCTURE.forEach((ph, idx) => {
+            const matchNum = idx + 1;
+            bracketState.r32['match' + matchNum] = {
+              team1: null, team2: null,
+              slot1: ph.slot1, slot2: ph.slot2,
+              isPlaceholder: true
+            };
+          });
+        }
 
         renderBracket();
         twemoji.parse(document.body);
       } catch(err) {
         console.error(err);
-        showToast("Error loading teams. Please refresh.", true);
+        showToast('Error loading teams. Please refresh.', true);
       }
     }
 
@@ -220,6 +294,14 @@
 
     function renderSlotHtml(round, matchNum, slot, teamId, isWinnerSelected, isTBD) {
       if (!teamId) {
+        // Show FIFA bracket placeholder label when available (e.g. "1A", "3/CEFHI")
+        const match = bracketState[round]['match' + matchNum];
+        if (round === 'r32' && match && match.isPlaceholder) {
+          const label = slot === 'team1' ? match.slot1 : match.slot2;
+          return `<div class="match-slot empty" style="opacity:0.6;cursor:default;">
+            <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.03em;color:var(--text-secondary);">${label}</span>
+          </div>`;
+        }
         return `<div class="match-slot empty">
           <span>${isTBD ? '⏳ TBD' : 'TBD'}</span>
         </div>`;
@@ -252,10 +334,11 @@
         const card = document.createElement("div");
         card.className = "match-card";
         const hasBothTeams = match.team1 && match.team2;
-        const isTBD = match.isTBD || (!match.team1 && !match.team2 && roundName === 'r32');
-        let subTitle = "";
-        if (roundName === 'r32') subTitle = hasBothTeams ? "Pick Winner" : "⏳ Coming Soon";
-        else subTitle = hasBothTeams ? "Pick Winner" : "Awaiting picks";
+        const isPlaceholder = roundName === 'r32' && match.isPlaceholder;
+        const isTBD = !match.team1 && !match.team2 && roundName === 'r32' && !isPlaceholder;
+        let subTitle = '';
+        if (roundName === 'r32') subTitle = hasBothTeams ? 'Pick Winner' : (isPlaceholder ? '🗓 Not Yet Determined' : '⏳ Coming Soon');
+        else subTitle = hasBothTeams ? 'Pick Winner' : 'Awaiting picks';
         card.innerHTML = `
           <div class="match-header">
             <span>Match ${i}</span>

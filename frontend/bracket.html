@@ -82,10 +82,9 @@
     }
 
     /*
-     * DEV REFERENCE — original hardcoded R32_MATCHES array.
-     * No longer used for rendering. Kept as a fallback reference only.
-     *
-    const R32_MATCHES = [
+     * DEV REFERENCE — original hardcoded R32 bracket by group draw (before we had real match data).
+     * Kept for reference. Do not use for rendering.
+    const R32_MATCHES_ORIGINAL = [
       { id:'m1',  team1:'RSA', team2:'CAN' },
       { id:'m2',  team1:'BRA', team2:'JPN' },
       { id:'m3',  team1:'GER', team2:'PAR' },
@@ -105,19 +104,9 @@
     ];
      */
 
-    // Official FIFA 2026 knockout bracket — group-slot placeholders.
-    // These are displayed before football-data.org publishes the official Round of 32 fixtures.
-    // Once real fixtures exist in the /results API, the actual team names replace these labels.
-    //
-    // ORDER matches so consecutive pairs feed the SAME Round of 16 match:
-    //   Slots 1&2  → R16 match 1  (M74 GER + M77 FRA  → M89 Philadelphia)
-    //   Slots 3&4  → R16 match 2  (M73 RSA + M75 NED  → M90 Houston)
-    //   Slots 5&6  → R16 match 3  (M83 2K  + M84 1H   → M93 Dallas)
-    //   Slots 7&8  → R16 match 4  (M81 USA + M82 1G   → M94 Seattle)
-    //   Slots 9&10 → R16 match 5  (M76 BRA + M78 CIV  → M91 NY/NJ)
-    //   Slots 11&12→ R16 match 6  (M79 MEX + M80 1L   → M92 Mexico City)
-    //   Slots 13&14→ R16 match 7  (M86 ARG + M88 AUS  → M95 Atlanta)
-    //   Slots 15&16→ R16 match 8  (M85 SUI + M87 1K   → M96 Vancouver)
+    // Official FIFA 2026 knockout bracket structure with match IDs.
+    // Each slot maps to a FIFA match number (73-88) in bracket order.
+    // Consecutive pairs feed into the same Round of 16 match.
     const R32_STRUCTURE = [
       { slot1: 'GER',     slot2: '3/ABCDF', fifaMatchNum: 74 },  // Match 1  → R16-1
       { slot1: 'FRA',     slot2: '3/CDFGH', fifaMatchNum: 77 },  // Match 2  → R16-1
@@ -136,10 +125,6 @@
       { slot1: 'SUI',     slot2: '3/EFGIJ', fifaMatchNum: 85 },  // Match 15 → R16-8
       { slot1: '1K',      slot2: '3/DEIJL', fifaMatchNum: 87 },  // Match 16 → R16-8
     ];
-
-    // FIFA official match numbers in bracket order (for sorting API results).
-    // Index = bracket slot (0-based), value = FIFA match number.
-    const R32_FIFA_ORDER = [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87];
 
     const TEAM_INFO = {
       CZE:{rank:35,odds:"+15000"}, KOR:{rank:22,odds:"+8000"}, MEX:{rank:15,odds:"+5000"},
@@ -176,7 +161,6 @@
 
     async function loadTeams() {
       try {
-        // Fetch teams and current match results concurrently
         const [teamsRes, resultsRes] = await Promise.all([
           fetch(`${API_BASE}/teams`),
           fetch(`${API_BASE}/results`)
@@ -185,13 +169,10 @@
         if (!teamsRes.ok) throw new Error('Failed to fetch teams');
         allTeams = await teamsRes.json();
 
-        // Attempt to read official Round of 32 fixtures from the API
         let r32ApiMatches = [];
         if (resultsRes.ok) {
           try {
             const allResults = await resultsRes.json();
-            // The sync worker stores round-of-32 rows with round = 'r32'
-            // team1_id and team2_id are TLA codes (e.g. 'BRA'), id is football-data.org's match id
             r32ApiMatches = Array.isArray(allResults)
               ? allResults.filter(m => m.round === 'r32' && m.team1_id && m.team2_id)
               : [];
@@ -200,43 +181,26 @@
           }
         }
 
-        if (r32ApiMatches.length > 0) {
-          // ── API PATH ─────────────────────────────────────────────────────────
-          // Official fixtures exist — populate bracket from football-data.org data.
-          // Sort by the order they appear in the official bracket (match_date ascending).
-          r32ApiMatches.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-
-          r32ApiMatches.forEach((match, idx) => {
-            const matchNum = idx + 1;
+        // Populate bracket by matching API results to FIFA match IDs in R32_STRUCTURE
+        R32_STRUCTURE.forEach((ph, idx) => {
+          const matchNum = idx + 1;
+          const apiMatch = r32ApiMatches.find(m => Number(m.id) === ph.fifaMatchNum);
+          
+          if (apiMatch) {
             bracketState.r32['match' + matchNum] = {
-              team1: match.team1_id,
-              team2: match.team2_id,
-              apiMatchId: String(match.id),
+              team1: apiMatch.team1_id,
+              team2: apiMatch.team2_id,
+              apiMatchId: String(apiMatch.id),
               isPlaceholder: false
             };
-          });
-
-          // Fill any remaining slots (shouldn't happen once all 16 are published)
-          for (let i = r32ApiMatches.length + 1; i <= 16; i++) {
-            const ph = R32_STRUCTURE[i - 1];
-            bracketState.r32['match' + i] = {
+          } else {
+            bracketState.r32['match' + matchNum] = {
               team1: null, team2: null,
               slot1: ph.slot1, slot2: ph.slot2,
               isPlaceholder: true
             };
           }
-        } else {
-          // ── PLACEHOLDER PATH ─────────────────────────────────────────────────
-          // No official fixtures yet — show FIFA bracket slot labels.
-          R32_STRUCTURE.forEach((ph, idx) => {
-            const matchNum = idx + 1;
-            bracketState.r32['match' + matchNum] = {
-              team1: null, team2: null,
-              slot1: ph.slot1, slot2: ph.slot2,
-              isPlaceholder: true
-            };
-          });
-        }
+        });
 
         renderBracket();
         twemoji.parse(document.body);
@@ -308,7 +272,6 @@
 
     function renderSlotHtml(round, matchNum, slot, teamId, isWinnerSelected, isTBD) {
       if (!teamId) {
-        // Show FIFA bracket placeholder label when available (e.g. "1A", "3/CEFHI")
         const match = bracketState[round]['match' + matchNum];
         if (round === 'r32' && match && match.isPlaceholder) {
           const label = slot === 'team1' ? match.slot1 : match.slot2;
@@ -417,7 +380,6 @@
       if (!name) { showToast("Please enter a display name first",true); nameInput.focus(); return; }
       if (!picks.champion) { showToast("Please complete your bracket before submitting!",true); return; }
 
-      // Store R32 slots for reconstruction in view.html
       picks.r32_slots = {};
       for (let m in bracketState.r32) {
         picks.r32_slots[m] = { team1:bracketState.r32[m].team1, team2:bracketState.r32[m].team2 };

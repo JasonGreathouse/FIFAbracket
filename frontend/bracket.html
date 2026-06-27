@@ -81,10 +81,8 @@
       return iso.split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
     }
 
-    /*
-     * DEV REFERENCE — original hardcoded R32 bracket by group draw (before we had real match data).
-     * Kept for reference. Do not use for rendering.
-    const R32_MATCHES_ORIGINAL = [
+    // Hardcoded R32 matchups — confirmed + TBD
+    const R32_MATCHES = [
       { id:'m1',  team1:'RSA', team2:'CAN' },
       { id:'m2',  team1:'BRA', team2:'JPN' },
       { id:'m3',  team1:'GER', team2:'PAR' },
@@ -101,29 +99,6 @@
       { id:'m14', team1:'TBD', team2:'TBD' },
       { id:'m15', team1:'TBD', team2:'TBD' },
       { id:'m16', team1:'TBD', team2:'TBD' },
-    ];
-     */
-
-    // Official FIFA 2026 knockout bracket structure with match IDs.
-    // Each slot maps to a FIFA match number (73-88) in bracket order.
-    // Consecutive pairs feed into the same Round of 16 match.
-    const R32_STRUCTURE = [
-      { slot1: 'GER',     slot2: '3/ABCDF', fifaMatchNum: 74 },  // Match 1  → R16-1
-      { slot1: 'FRA',     slot2: '3/CDFGH', fifaMatchNum: 77 },  // Match 2  → R16-1
-      { slot1: 'RSA',     slot2: 'CAN',     fifaMatchNum: 73 },  // Match 3  → R16-2
-      { slot1: 'NED',     slot2: 'MAR',     fifaMatchNum: 75 },  // Match 4  → R16-2
-      { slot1: '2K',      slot2: '2L',      fifaMatchNum: 83 },  // Match 5  → R16-3
-      { slot1: '1H',      slot2: '2J',      fifaMatchNum: 84 },  // Match 6  → R16-3
-      { slot1: 'USA',     slot2: 'BIH',     fifaMatchNum: 81 },  // Match 7  → R16-4
-      { slot1: '1G',      slot2: '3/AEHIJ', fifaMatchNum: 82 },  // Match 8  → R16-4
-      { slot1: 'BRA',     slot2: 'JPN',     fifaMatchNum: 76 },  // Match 9  → R16-5
-      { slot1: 'CIV',     slot2: 'NOR',     fifaMatchNum: 78 },  // Match 10 → R16-5
-      { slot1: 'MEX',     slot2: '3/CEFHI', fifaMatchNum: 79 },  // Match 11 → R16-6
-      { slot1: '1L',      slot2: '3/EHIJK', fifaMatchNum: 80 },  // Match 12 → R16-6
-      { slot1: 'ARG',     slot2: '2H',      fifaMatchNum: 86 },  // Match 13 → R16-7
-      { slot1: 'AUS',     slot2: '2G',      fifaMatchNum: 88 },  // Match 14 → R16-7
-      { slot1: 'SUI',     slot2: '3/EFGIJ', fifaMatchNum: 85 },  // Match 15 → R16-8
-      { slot1: '1K',      slot2: '3/DEIJL', fifaMatchNum: 87 },  // Match 16 → R16-8
     ];
 
     const TEAM_INFO = {
@@ -161,52 +136,25 @@
 
     async function loadTeams() {
       try {
-        const [teamsRes, resultsRes] = await Promise.all([
-          fetch(`${API_BASE}/teams`),
-          fetch(`${API_BASE}/results`)
-        ]);
+        const res = await fetch(`${API_BASE}/teams`);
+        if (!res.ok) throw new Error("Failed to fetch teams");
+        allTeams = await res.json();
 
-        if (!teamsRes.ok) throw new Error('Failed to fetch teams');
-        allTeams = await teamsRes.json();
-
-        let r32ApiMatches = [];
-        if (resultsRes.ok) {
-          try {
-            const allResults = await resultsRes.json();
-            r32ApiMatches = Array.isArray(allResults)
-              ? allResults.filter(m => m.round === 'r32' && m.team1_id && m.team2_id)
-              : [];
-          } catch(e) {
-            console.warn('Could not parse results:', e);
-          }
-        }
-
-        // Populate bracket by matching API results to FIFA match IDs in R32_STRUCTURE
-        R32_STRUCTURE.forEach((ph, idx) => {
+        // Pre-load R32 matchups from hardcoded list
+        R32_MATCHES.forEach((match, idx) => {
           const matchNum = idx + 1;
-          const apiMatch = r32ApiMatches.find(m => Number(m.id) === ph.fifaMatchNum);
-          
-          if (apiMatch) {
-            bracketState.r32['match' + matchNum] = {
-              team1: apiMatch.team1_id,
-              team2: apiMatch.team2_id,
-              apiMatchId: String(apiMatch.id),
-              isPlaceholder: false
-            };
-          } else {
-            bracketState.r32['match' + matchNum] = {
-              team1: null, team2: null,
-              slot1: ph.slot1, slot2: ph.slot2,
-              isPlaceholder: true
-            };
-          }
+          bracketState.r32["match"+matchNum] = {
+            team1: match.team1 === 'TBD' ? null : match.team1,
+            team2: match.team2 === 'TBD' ? null : match.team2,
+            isTBD: match.team1 === 'TBD' || match.team2 === 'TBD'
+          };
         });
 
         renderBracket();
         twemoji.parse(document.body);
       } catch(err) {
         console.error(err);
-        showToast('Error loading teams. Please refresh.', true);
+        showToast("Error loading teams. Please refresh.", true);
       }
     }
 
@@ -272,13 +220,6 @@
 
     function renderSlotHtml(round, matchNum, slot, teamId, isWinnerSelected, isTBD) {
       if (!teamId) {
-        const match = bracketState[round]['match' + matchNum];
-        if (round === 'r32' && match && match.isPlaceholder) {
-          const label = slot === 'team1' ? match.slot1 : match.slot2;
-          return `<div class="match-slot empty" style="opacity:0.6;cursor:default;">
-            <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.03em;color:var(--text-secondary);">${label}</span>
-          </div>`;
-        }
         return `<div class="match-slot empty">
           <span>${isTBD ? '⏳ TBD' : 'TBD'}</span>
         </div>`;
@@ -311,11 +252,10 @@
         const card = document.createElement("div");
         card.className = "match-card";
         const hasBothTeams = match.team1 && match.team2;
-        const isPlaceholder = roundName === 'r32' && match.isPlaceholder;
-        const isTBD = !match.team1 && !match.team2 && roundName === 'r32' && !isPlaceholder;
-        let subTitle = '';
-        if (roundName === 'r32') subTitle = hasBothTeams ? 'Pick Winner' : (isPlaceholder ? '🗓 Not Yet Determined' : '⏳ Coming Soon');
-        else subTitle = hasBothTeams ? 'Pick Winner' : 'Awaiting picks';
+        const isTBD = match.isTBD || (!match.team1 && !match.team2 && roundName === 'r32');
+        let subTitle = "";
+        if (roundName === 'r32') subTitle = hasBothTeams ? "Pick Winner" : "⏳ Coming Soon";
+        else subTitle = hasBothTeams ? "Pick Winner" : "Awaiting picks";
         card.innerHTML = `
           <div class="match-header">
             <span>Match ${i}</span>
@@ -380,6 +320,7 @@
       if (!name) { showToast("Please enter a display name first",true); nameInput.focus(); return; }
       if (!picks.champion) { showToast("Please complete your bracket before submitting!",true); return; }
 
+      // Store R32 slots for reconstruction in view.html
       picks.r32_slots = {};
       for (let m in bracketState.r32) {
         picks.r32_slots[m] = { team1:bracketState.r32[m].team1, team2:bracketState.r32[m].team2 };

@@ -177,14 +177,28 @@
     }
 
     function parseResults(resultsData) {
-      if (Array.isArray(resultsData)) {
-        resultsData.forEach(item=>{
-          const r=item.round, m=item.match||item.matchId||item.id, w=item.winner;
-          if (r&&m&&w) resultsLookup[r][m]=w;
-          if (item.champion) resultsLookup.champion=item.champion;
-        });
+  if (Array.isArray(resultsData)) {
+    resultsData.forEach(item=>{
+      const r=item.round, w=item.winner_id;
+      if (!r||!w) return;
+      // Match r32 results against r32_slots by team IDs
+      if (r==='r32' && picks.r32_slots) {
+        for (const [matchKey, slot] of Object.entries(picks.r32_slots)) {
+          if (
+            (slot.team1===item.team1_id && slot.team2===item.team2_id) ||
+            (slot.team1===item.team2_id && slot.team2===item.team1_id)
+          ) {
+            resultsLookup.r32[matchKey] = w;
+            break;
+          }
+        }
+      } else {
+        // For r16/qf/sf/final we'll handle later
+        resultsLookup[r][item.id] = w;
       }
-    }
+    });
+  }
+}
 
     function propagateWinners() {
       for (let i=1;i<=16;i++) { const w=picks.r32["match"+i]; if(w){const c=Math.floor((i-1)/2)+1;bracketState.r16["match"+c][(i%2!==0)?'team1':'team2']=w;} }

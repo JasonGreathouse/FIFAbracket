@@ -28,7 +28,6 @@ async function fetchMatches(env) {
     }
   );
 
-  // Check rate limit headers
   const remainingRequests = res.headers.get('X-Requests-Available-Minute');
   if (remainingRequests && parseInt(remainingRequests) < 2) {
     console.log('Rate limit close, backing off');
@@ -46,8 +45,8 @@ async function fetchMatches(env) {
 
 function mapRound(stage) {
   const map = {
-    'ROUND_OF_32': 'r32',
-    'ROUND_OF_16': 'r16',
+    'LAST_32': 'r32',
+    'LAST_16': 'r16',
     'QUARTER_FINALS': 'qf',
     'SEMI_FINALS': 'sf',
     'FINAL': 'final',
@@ -55,12 +54,14 @@ function mapRound(stage) {
   return map[stage] || null;
 }
 
+
 async function syncResults(env) {
   const matches = await fetchMatches(env);
   if (!matches) return { synced: 0, error: 'Failed to fetch or rate limited' };
-
-  // Only process knockout stage matches
+  
   const knockout = matches.filter(m => mapRound(m.stage));
+console.log('Stages found:', [...new Set(matches.map(m => m.stage))]);
+console.log('Knockout count:', knockout.length);
   let synced = 0;
 
   for (const match of knockout) {
@@ -74,6 +75,7 @@ async function syncResults(env) {
           ? match.awayTeam.tla
           : null
         : null;
+        console.log(`Match ${match.id}: status=${status}, score.winner=${match.score?.winner}, tla_winner=${winner}`);
 
     await env.DB.prepare(`
       INSERT INTO matches (id, round, team1_id, team2_id, winner_id, match_date, status)
@@ -96,7 +98,6 @@ async function syncResults(env) {
     synced++;
   }
 
-  // Recalculate all bracket scores
   await recalculateScores(env);
 
   return { synced, total: knockout.length };
@@ -112,21 +113,51 @@ async function recalculateScores(env) {
   ).all();
 
   for (const bracket of brackets) {
-    const picks = JSON.parse(bracket.picks);
+    let picks;
+    try {
+      picks = JSON.parse(bracket.picks);
+    } catch(e) {
+      console.error('Bad picks JSON for bracket', bracket.id);
+      continue;
+    }
+
     let score = 0;
+    const r32Slots = picks.r32_slots || {};
 
     for (const match of matches) {
       const round = match.round;
       const winner = match.winner_id;
       const points = SCORING[round] || 0;
 
-      // Check if user picked the correct winner for this match
-      const userPick = picks[match.id];
-      if (userPick && userPick === winner) {
-        score += points;
+      if (round === 'r32') {
+        // Find which match number in r32_slots corresponds to this real match
+        // by matching both teams regardless of home/away order
+        let matchNum = null;
+        for (const [key, slot] of Object.entries(r32Slots)) {
+          if (
+            (slot.team1 === match.team1_id && slot.team2 === match.team2_id) ||
+            (slot.team1 === match.team2_id && slot.team2 === match.team1_id)
+          ) {
+            matchNum = key; // e.g. "match3"
+            break;
+          }
+        }
+        if (matchNum && picks.r32[matchNum] === winner) {
+          score += points;
+        }
+      } else {
+        // For r16/qf/sf/final, match by round picks
+        // Walk all picks for this round and check if any match the winner
+        const roundPicks = picks[round] || {};
+        for (const pick of Object.values(roundPicks)) {
+          if (pick === winner) {
+            score += points;
+            break;
+          }
+        }
       }
 
-      // Bonus points for champion
+      // Champion bonus — awarded on top of final points
       if (round === 'final' && picks.champion === winner) {
         score += SCORING.champion;
       }

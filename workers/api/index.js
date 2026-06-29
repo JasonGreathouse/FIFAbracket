@@ -99,7 +99,49 @@ export default {
       ).all();
       return json(results);
     }
+// GET /today - today's World Cup matches from football-data.org
+if (method === 'GET' && path === '/today') {
+  const today = new Date().toISOString().split('T')[0];
+  
+  
+  try {
+    const res = await fetch(
+      `https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${today}&dateTo=${today}`,
+      { headers: { 'X-Auth-Token': env.FOOTBALL_DATA_KEY } }
+    );
 
+    const remaining = res.headers.get('X-Requests-Available-Minute');
+    if (remaining && parseInt(remaining) < 2) {
+      return json({ error: 'Rate limited, try again shortly' }, 429);
+    }
+
+    if (!res.ok) {
+      return json({ error: 'Failed to fetch matches' }, 502);
+    }
+
+    const data = await res.json();
+    const matches = data.matches.map(m => ({
+      id: m.id,
+      status: m.status,
+      minute: m.minute || null,
+      homeTeam: m.homeTeam.name,
+      homeTla: m.homeTeam.tla,
+      awayTeam: m.awayTeam.name,
+      awayTla: m.awayTeam.tla,
+      homeScore: m.score.fullTime.home,
+      awayScore: m.score.fullTime.away,
+      halfTimeHome: m.score.halfTime.home,
+      halfTimeAway: m.score.halfTime.away,
+      utcDate: m.utcDate,
+      venue: m.venue || null,
+      winner: m.score.winner || null
+    }));
+
+    return json({ date: today, matches });
+  } catch(err) {
+    return json({ error: 'Internal error', detail: err.message }, 500);
+  }
+}
     return json({ error: 'Not found' }, 404);
   }
 };
